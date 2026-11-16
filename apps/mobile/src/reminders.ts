@@ -22,20 +22,49 @@ export function leadLabel(minutes: number) {
   return `${minutes} minutos`
 }
 
-export async function syncAppointmentReminders(profileId: string, minutes: number[], items: AppointmentView[]) {
+async function ensurePermission() {
   const permission = await Notifications.getPermissionsAsync()
   const granted = permission.granted
     ? permission
     : await Notifications.requestPermissionsAsync()
-  if (!granted.granted) return false
+  return granted.granted
+}
 
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync(CHANNEL, {
-      name: "Horários",
-      importance: Notifications.AndroidImportance.HIGH,
+async function ensureChannel() {
+  if (Platform.OS !== "android") return
+  await Notifications.setNotificationChannelAsync(CHANNEL, {
+    name: "Horários",
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: "default",
+  })
+}
+
+/** Dispara um aviso em alguns segundos para validar permissão e canal no aparelho. */
+export async function fireTestReminder(seconds = 8) {
+  const ok = await ensurePermission()
+  if (!ok) return { ok: false as const, reason: "permission" as const }
+  await ensureChannel()
+  const fireAt = new Date(Date.now() + Math.max(3, seconds) * 1000)
+  await Notifications.scheduleNotificationAsync({
+    identifier: `ag-test-${Date.now()}`,
+    content: {
+      title: "Teste de aviso",
+      body: "Se você leu isso, a notificação do Agenda está funcionando.",
       sound: "default",
-    })
-  }
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: fireAt,
+      channelId: CHANNEL,
+    },
+  })
+  return { ok: true as const, fireAt }
+}
+
+export async function syncAppointmentReminders(profileId: string, minutes: number[], items: AppointmentView[]) {
+  const ok = await ensurePermission()
+  if (!ok) return false
+  await ensureChannel()
 
   await Notifications.cancelAllScheduledNotificationsAsync()
   const now = Date.now()

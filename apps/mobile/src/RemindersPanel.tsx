@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { Pressable, Text, TextInput, View, type TextStyle, type ViewStyle } from "react-native"
 import { api } from "./api"
 import { SoftPress } from "./motion"
-import { leadLabel } from "./reminders"
+import { fireTestReminder, leadLabel } from "./reminders"
 
 type Paint = {
   bg: string
@@ -27,6 +27,8 @@ export function RemindersPanel(props: {
   const [custom, setCustom] = useState("")
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testHint, setTestHint] = useState("")
 
   useEffect(() => {
     void api<{ minutes: number[] }>("/api/reminders").then((result) => setMinutes(result.minutes)).catch(() => undefined)
@@ -68,6 +70,24 @@ export function RemindersPanel(props: {
       setError(cause instanceof Error ? cause.message : "Não foi possível salvar os avisos.")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function testNow() {
+    setTesting(true)
+    setError("")
+    setTestHint("")
+    try {
+      const result = await fireTestReminder(8)
+      if (!result.ok) {
+        setError("Permita notificações nas configurações do celular e tente de novo.")
+        return
+      }
+      setTestHint("Aviso de teste em ~8 segundos. Pode sair do app pra ver o banner.")
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível agendar o teste.")
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -121,7 +141,17 @@ export function RemindersPanel(props: {
       </View>
 
       {!!error && <Text style={{ color: props.colors.danger }}>{error}</Text>}
-      <SoftPress style={[props.button, { borderRadius: 18, paddingVertical: 16, opacity: saving ? 0.7 : 1 }]} onPress={() => void save()} disabled={saving}>
+      {!!testHint && <Text style={{ color: props.colors.ink }}>{testHint}</Text>}
+      <SoftPress
+        style={[props.button, { borderRadius: 18, paddingVertical: 16, backgroundColor: props.colors.ink, opacity: testing ? 0.7 : 1 }]}
+        onPress={() => void testNow()}
+        disabled={testing || saving}
+      >
+        <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>
+          {testing ? "Agendando teste..." : "Testar notificação agora"}
+        </Text>
+      </SoftPress>
+      <SoftPress style={[props.button, { borderRadius: 18, paddingVertical: 16, opacity: saving ? 0.7 : 1 }]} onPress={() => void save()} disabled={saving || testing}>
         <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>{saving ? "Salvando..." : "Salvar avisos"}</Text>
       </SoftPress>
     </>
