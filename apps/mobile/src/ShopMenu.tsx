@@ -16,7 +16,7 @@ import {
   type SessionState,
   type TeamMember,
 } from "@rumo/core"
-import { BRAND_COLORS, inkOn, titledLabel, verticalById } from "@rumo/theme"
+import { BRAND_COLORS, SEAT_PRICE_CENTS, inkOn, titledLabel, verticalById } from "@rumo/theme"
 import Ionicons from "@expo/vector-icons/build/Ionicons"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
@@ -481,6 +481,9 @@ function TeamPanel(props: {
           <Text style={{ color: props.colors.ink, fontWeight: "700" }}>Porcentagem</Text>
           <TextInput style={props.input} keyboardType="number-pad" value={percent} onChangeText={setPercent} />
           <Text style={{ color: props.colors.muted }}>R$ 50 → {props.professionalLabel.toLowerCase()} {formatBRL(sample)} · loja {formatBRL(5000 - sample)}</Text>
+          <Text style={{ color: props.colors.ink, lineHeight: 20, fontWeight: "600" }}>
+            Esta conta adiciona {formatBRL(SEAT_PRICE_CENTS)} na próxima mensalidade.
+          </Text>
           <SoftPress style={[props.button, { borderRadius: 14, paddingVertical: 13 }]} onPress={() => void add()}>
             <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700" }}>Criar conta</Text>
           </SoftPress>

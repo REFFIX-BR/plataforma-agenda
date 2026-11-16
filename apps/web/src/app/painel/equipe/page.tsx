@@ -184,6 +184,9 @@ export default function TeamPage() {
           </div>
         </label>
         <p className="muted text-sm md:col-span-2">As profissões e os serviços ficam em Serviços. Aqui você só liga a pessoa à profissão.</p>
+        <p className="rounded-xl border border-[color:var(--line)] bg-[color:var(--bg)] px-3 py-3 text-sm font-semibold md:col-span-2">
+          Esta conta adiciona {formatBRL(session.store!.seatPriceCents)} na próxima mensalidade.
+        </p>
         <button className="btn md:col-span-2" disabled={pending}>Cadastrar</button>
       </form>
       {error && <p className="alert mt-3" role="alert">{error}</p>}

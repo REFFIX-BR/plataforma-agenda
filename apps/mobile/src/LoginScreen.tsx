@@ -97,8 +97,8 @@ export function LoginScreen(props: {
               </View>
               <Text style={styles.planTitle}>Teste a Agenda sem pagar</Text>
               <Text style={styles.planCopy}>
-                Ao criar a loja, você ganha 7 dias para conhecer tudo. Depois o plano fica em {formatBRL(BASE_PRICE_CENTS)}/mês
-                + {formatBRL(SEAT_PRICE_CENTS)} por atendente ativo.
+                Ao criar a loja, você ganha 7 dias para conhecer tudo. Depois o plano fica em {formatBRL(BASE_PRICE_CENTS)}/mês.
+                Cada conta de atendente adiciona {formatBRL(SEAT_PRICE_CENTS)} na próxima mensalidade.
               </Text>
               <View style={styles.planRows}>
                 <View style={styles.planRow}>
@@ -108,6 +108,10 @@ export function LoginScreen(props: {
                 <View style={styles.planRow}>
                   <Ionicons name="calendar-outline" size={16} color={palette.primary} />
                   <Text style={styles.planRowText}>Agenda, clientes e equipe liberados no teste</Text>
+                </View>
+                <View style={styles.planRow}>
+                  <Ionicons name="people-outline" size={16} color={palette.primary} />
+                  <Text style={styles.planRowText}>+ {formatBRL(SEAT_PRICE_CENTS)} por conta ativa na próxima mensalidade</Text>
                 </View>
                 <View style={styles.planRow}>
                   <Ionicons name="card-outline" size={16} color={palette.primary} />

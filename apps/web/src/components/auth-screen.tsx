@@ -59,12 +59,13 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" | "join" }) {
             </span>
             <h2 className="text-lg font-semibold">Teste a Agenda sem pagar</h2>
             <p className="muted text-sm leading-relaxed">
-              Ao criar a loja, você ganha 7 dias para conhecer tudo. Depois o plano fica em {formatBRL(BASE_PRICE_CENTS)}/mês
-              + {formatBRL(SEAT_PRICE_CENTS)} por atendente ativo.
+              Ao criar a loja, você ganha 7 dias para conhecer tudo. Depois o plano fica em {formatBRL(BASE_PRICE_CENTS)}/mês.
+              Cada conta de atendente adiciona {formatBRL(SEAT_PRICE_CENTS)} na próxima mensalidade.
             </p>
             <ul className="space-y-1.5 text-sm">
               <li>Sem cartão na criação da conta</li>
               <li>Agenda, clientes e equipe liberados no teste</li>
+              <li>+ {formatBRL(SEAT_PRICE_CENTS)} por conta ativa na próxima mensalidade</li>
               <li>Assine só se quiser continuar depois</li>
             </ul>
           </div>
