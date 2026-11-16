@@ -21,7 +21,10 @@ function devBase() {
   return null
 }
 
+export const PROD_API_URL = "https://agendaapi.reffix.com.br"
+
 export function defaultApiUrl() {
+  if (!__DEV__) return PROD_API_URL
   return devBase() ?? (Platform.OS === "android" ? "http://10.0.2.2:8081" : "http://localhost:8081")
 }
 
@@ -29,6 +32,10 @@ export async function apiUrl() {
   const stored = await getItem(API_KEY)
   const fallback = defaultApiUrl()
   if (!stored) return fallback
+  if (!__DEV__) {
+    if (/10\.0\.2\.2|localhost|127\.0\.0\.1|:3000\b|:3010\b|:8081\b/.test(stored)) return PROD_API_URL
+    return stored
+  }
   if (devBase() && /10\.0\.2\.2|localhost|127\.0\.0\.1|:3000\b/.test(stored)) return fallback
   return stored
 }
