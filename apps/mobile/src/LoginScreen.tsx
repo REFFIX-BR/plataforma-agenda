@@ -80,7 +80,7 @@ export function LoginScreen(props: {
       <View pointerEvents="none" style={styles.blobSmall} />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: layout.top + 24, paddingBottom: layout.bottom + 28, paddingHorizontal: layout.pad }]} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.column}>
-          <Image source={agendaLogo} style={styles.logo} resizeMode="contain" accessibilityLabel="Agenda" />
+          <Image source={agendaLogo} style={styles.logo} resizeMode="contain" accessibilityLabel="+Agenda" />
           {creating && (
             <Text style={[styles.title, { fontSize: layout.compact ? 32 : 40, lineHeight: layout.compact ? 38 : 46 }]}>Criar conta</Text>
           )}

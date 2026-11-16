@@ -48,8 +48,8 @@ export async function fireTestReminder(seconds = 8) {
   await Notifications.scheduleNotificationAsync({
     identifier: `ag-test-${Date.now()}`,
     content: {
-      title: "Teste de aviso",
-      body: "Se você leu isso, a notificação do Agenda está funcionando.",
+      title: "+Agenda",
+      body: "Se você leu isso, a notificação do +Agenda está funcionando.",
       sound: "default",
     },
     trigger: {
@@ -79,7 +79,7 @@ export async function syncAppointmentReminders(profileId: string, minutes: numbe
       await Notifications.scheduleNotificationAsync({
         identifier: `ag-${item.id}-${before}`,
         content: {
-          title: `Falta ${leadLabel(before)}`,
+          title: `+Agenda · Falta ${leadLabel(before)}`,
           body: `${item.clientName} · ${service} · ${formatTime(item.startsAt)}`,
           sound: "default",
         },

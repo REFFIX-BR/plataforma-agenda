@@ -141,12 +141,12 @@ export function SplashBoot() {
           }}
         >
           <View style={styles.iconWrap}>
-            <Image source={appIcon} style={styles.icon} resizeMode="contain" accessibilityLabel="Agenda" />
+            <Image source={appIcon} style={styles.icon} resizeMode="contain" accessibilityLabel="+Agenda" />
           </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: titleOpacity, transform: [{ translateY: titleRise }], alignItems: "center" }}>
-          <Text style={styles.brand}>Agenda</Text>
+          <Text style={styles.brand}>+Agenda</Text>
           <View style={styles.rule} />
         </Animated.View>
 
