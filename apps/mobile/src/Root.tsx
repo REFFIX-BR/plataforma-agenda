@@ -14,6 +14,7 @@
   weekStart,
   weekdayIndex,
   type AppointmentView,
+  type BillingSnapshot,
   type BusinessHour,
   type ClientRecord,
   type FinanceReport,
@@ -26,10 +27,12 @@
 import { brandColors, storePaint, titledLabel, verticalById, verticalList, type VerticalId } from "@rumo/theme"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
+  ActivityIndicator,
   Animated,
   AppState,
   Easing,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -42,7 +45,7 @@ import {
   type ViewStyle,
 } from "react-native"
 import Ionicons from "@expo/vector-icons/build/Ionicons"
-import { api, clearSessionToken, saveSessionToken, TOKEN_KEY } from "./api"
+import { api, apiUrl, clearSessionToken, saveSessionToken, TOKEN_KEY } from "./api"
 import { AgendaForm } from "./AgendaForm"
 import { MonthCalendar } from "./Calendar"
 import { ClientsScreen } from "./ClientsScreen"
@@ -418,6 +421,10 @@ function Main(props: {
   const [openPlan, setOpenPlan] = useState(false)
   const [billingWarn, setBillingWarn] = useState<5 | 3 | 1 | null>(null)
   const [paidOk, setPaidOk] = useState(false)
+  const [renewCpf, setRenewCpf] = useState("")
+  const [renewBusy, setRenewBusy] = useState(false)
+  const [renewError, setRenewError] = useState("")
+  const [renewDemo, setRenewDemo] = useState(false)
   const wasBlocked = useRef(false)
   const billing = props.session.billing
   const blocked = billing?.access === "blocked"
@@ -447,18 +454,69 @@ function Main(props: {
   const iconButton = { width: layout.compact ? 38 : 42, height: layout.compact ? 38 : 42, borderRadius: 15, backgroundColor: props.colors.bg, borderWidth: 1, borderColor: props.colors.line, alignItems: "center" as const, justifyContent: "center" as const }
 
   useEffect(() => {
-    if (!blocked || !owner) return
-    if (props.tab !== "more") props.setTab("more")
-    setOpenPlan(true)
-  }, [blocked, owner, props.tab, props.setTab])
+    if (!blocked) return
+    setRenewError("")
+    void api<BillingSnapshot>("/api/billing")
+      .then((next) => {
+        if (next.cpfCnpj) setRenewCpf(formatDocInput(next.cpfCnpj))
+        setRenewDemo(Boolean(next.demo))
+      })
+      .catch(() => undefined)
+  }, [blocked])
+
+  useEffect(() => {
+    if (!blocked) return
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return
+      void props.reloadSession().catch(() => undefined)
+    })
+    return () => sub.remove()
+  }, [blocked, props.reloadSession])
 
   useEffect(() => {
     if (wasBlocked.current && !blocked && owner && billing?.status === "active") {
       setPaidOk(true)
       setOpenPlan(false)
+      setRenewBusy(false)
+      setRenewError("")
     }
     wasBlocked.current = Boolean(blocked)
   }, [blocked, owner, billing?.status])
+
+  async function renewNow() {
+    setRenewBusy(true)
+    setRenewError("")
+    try {
+      const next = await api<BillingSnapshot>("/api/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ cpfCnpj: renewCpf }),
+      })
+      setRenewDemo(Boolean(next.demo))
+      if (next.cpfCnpj) setRenewCpf(formatDocInput(next.cpfCnpj))
+      if (!next.checkoutUrl) throw new Error("Não recebi o link de pagamento.")
+      const finalUrl = await resolveCheckoutUrl(next.checkoutUrl)
+      const can = await Linking.canOpenURL(finalUrl)
+      if (!can) throw new Error(`Abra no navegador: ${finalUrl}`)
+      await Linking.openURL(finalUrl)
+    } catch (cause) {
+      setRenewError(cause instanceof Error ? cause.message : "Não foi possível abrir o pagamento.")
+    } finally {
+      setRenewBusy(false)
+    }
+  }
+
+  async function renewDemoPay() {
+    setRenewBusy(true)
+    setRenewError("")
+    try {
+      await api<BillingSnapshot>("/api/billing/demo-confirm", { method: "POST", body: "{}" })
+      await props.reloadSession()
+    } catch (cause) {
+      setRenewError(cause instanceof Error ? cause.message : "Não foi possível confirmar o pagamento.")
+    } finally {
+      setRenewBusy(false)
+    }
+  }
 
   useEffect(() => {
     if (!owner || !billing?.warnDays || blocked) {
@@ -618,43 +676,60 @@ function Main(props: {
         />
       )}
       {!blocked && <Dock tabs={tabs} active={props.tab} colors={props.colors} onPress={props.setTab} />}
-      {blocked && owner && props.tab === "more" && (
-        <Dock
-          tabs={[{ id: "more" as const, label: "Menu", icon: "menu" as const, idle: "menu-outline" as const }]}
-          active="more"
-          colors={props.colors}
-          onPress={props.setTab}
-        />
-      )}
-      {blocked && !(owner && props.tab === "more") && (
-        <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: props.colors.bg, paddingHorizontal: layout.pad, paddingTop: layout.top + 28, paddingBottom: layout.bottom + 24, justifyContent: "center", gap: 16 }}>
-          <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>ACESSO</Text>
-          <Text style={{ color: props.colors.ink, fontSize: 32, fontWeight: "700", letterSpacing: -0.5 }}>
-            {owner ? "Período de teste encerrado" : "Agenda temporariamente indisponível"}
-          </Text>
-          <Text style={{ color: props.colors.muted, lineHeight: 22, fontSize: 16 }}>
-            {owner
-              ? `O período gratuito de ${storeName} terminou. Para continuar usando a agenda, assine o plano (${formatBRL(billing?.planCents ?? props.session.planCents)}/mês).`
-              : `O acesso à agenda de ${storeName} está temporariamente indisponível. Fale com o administrador da conta para regularizar a assinatura.`}
-          </Text>
-          {owner ? (
-            <SoftPress
-              style={[props.button, { borderRadius: 16, paddingVertical: 16 }]}
-              onPress={() => { props.setTab("more"); setOpenPlan(true) }}
-            >
-              <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>Assinar plano</Text>
-            </SoftPress>
-          ) : (
-            <SoftPress style={{ paddingVertical: 14 }} onPress={() => void props.onLogout()}>
-              <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "700" }}>Sair</Text>
-            </SoftPress>
-          )}
-          {owner && (
-            <SoftPress style={{ paddingVertical: 10 }} onPress={() => void props.onLogout()}>
-              <Text style={{ color: props.colors.muted, textAlign: "center", fontWeight: "700" }}>Sair da conta</Text>
-            </SoftPress>
-          )}
-        </View>
+      {blocked && (
+        <Modal visible transparent animationType="fade" onRequestClose={() => undefined}>
+          <View style={{ flex: 1, backgroundColor: "rgba(16,14,12,0.55)", justifyContent: "center", padding: layout.pad }}>
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+              <View style={{ backgroundColor: props.colors.surface, borderRadius: 24, borderWidth: 1, borderColor: props.colors.line, padding: 22, gap: 14 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: "rgba(157,44,44,0.12)", alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="lock-closed" size={22} color={props.colors.danger} />
+                </View>
+                <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>PLANO</Text>
+                <Text style={{ color: props.colors.ink, fontSize: 26, fontWeight: "700", letterSpacing: -0.4 }}>
+                  {owner ? "Seu plano expirou" : "Agenda indisponível"}
+                </Text>
+                <Text style={{ color: props.colors.muted, lineHeight: 22, fontSize: 15 }}>
+                  {owner
+                    ? `Renove agora para continuar usando a agenda de ${storeName} (${formatBRL(billing?.planCents ?? props.session.planCents)}/mês). Este aviso só some depois do pagamento.`
+                    : `O acesso à agenda de ${storeName} está pausado. Fale com o administrador para renovar o plano, ou saia da conta.`}
+                </Text>
+                {owner && (
+                  <>
+                    <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>CPF OU CNPJ</Text>
+                    <TextInput
+                      style={[props.input, { borderRadius: 14 }]}
+                      value={renewCpf}
+                      onChangeText={(value) => setRenewCpf(formatDocInput(value))}
+                      placeholder="000.000.000-00"
+                      placeholderTextColor={props.colors.muted}
+                      keyboardType="number-pad"
+                      editable={!renewBusy}
+                    />
+                    {!!renewError && <Text style={{ color: props.colors.danger }}>{renewError}</Text>}
+                    <SoftPress
+                      style={[props.button, { borderRadius: 16, paddingVertical: 15, opacity: renewBusy ? 0.7 : 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }]}
+                      onPress={() => void renewNow()}
+                      disabled={renewBusy}
+                    >
+                      {renewBusy ? <ActivityIndicator color={props.colors.onPrimary} /> : <Ionicons name="card-outline" size={18} color={props.colors.onPrimary} />}
+                      <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>
+                        {renewBusy ? "Abrindo..." : "Renovar agora"}
+                      </Text>
+                    </SoftPress>
+                    {renewDemo && (
+                      <SoftPress onPress={() => void renewDemoPay()} disabled={renewBusy} style={{ paddingVertical: 6 }}>
+                        <Text style={{ color: props.colors.primary, textAlign: "center", fontWeight: "700" }}>Simular pagamento (demo)</Text>
+                      </SoftPress>
+                    )}
+                  </>
+                )}
+                <SoftPress style={{ paddingVertical: 10 }} onPress={() => void props.onLogout()} disabled={renewBusy}>
+                  <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "700" }}>Sair da conta</Text>
+                </SoftPress>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       )}
       {owner && billingWarn != null && !blocked && (
         <Modal visible transparent animationType="fade" onRequestClose={() => void dismissBillingWarn()}>
@@ -1518,4 +1593,33 @@ function MoneyLine(props: { label: string; value: string; colors: Paint; strong?
       <Text style={{ color: props.colors.ink, fontWeight: "700", fontSize: props.strong ? 18 : 15 }}>{props.value}</Text>
     </View>
   )
+}
+
+function formatDocInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 14)
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2")
+}
+
+async function resolveCheckoutUrl(url: string) {
+  try {
+    const target = new URL(url)
+    if (target.hostname !== "localhost" && target.hostname !== "127.0.0.1") return url
+    const base = new URL(await apiUrl())
+    target.hostname = base.hostname
+    if (base.port === "8081") target.port = "3010"
+    else if (base.port) target.port = base.port
+    return target.toString()
+  } catch {
+    return url
+  }
 }
