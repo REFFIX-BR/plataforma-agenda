@@ -227,7 +227,7 @@ function Composer({
   onSaved: () => Promise<void>
 }) {
   const [serviceIds, setServiceIds] = useState<string[]>([])
-  const [professionalId, setProfessionalId] = useState(preferredId || people[0]?.id ?? "")
+  const [professionalId, setProfessionalId] = useState(preferredId || people[0]?.id || "")
   const [date, setDate] = useState(day)
   const [slots, setSlots] = useState<string[]>([])
   const [startsAt, setStartsAt] = useState("")
