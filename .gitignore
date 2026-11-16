@@ -1,0 +1,9 @@
+node_modules
+.next
+.expo
+dist
+*.log
+.env
+.env.local
+apps/web/data/*.json
+apps/mobile/.expo

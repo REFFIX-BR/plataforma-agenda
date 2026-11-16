@@ -1,0 +1,16 @@
+{
+  "name": "@rumo/core",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "tsx --test src/slots.test.ts src/finance.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3",
+    "typescript": "^5.7.2"
+  }
+}

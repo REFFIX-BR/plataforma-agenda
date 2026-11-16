@@ -1,0 +1,9 @@
+{
+  "name": "rumo",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix apps/web",
+    "test": "npm test --prefix packages/core && npm test --prefix apps/web",
+    "mobile": "npm start --prefix apps/mobile"
+  }
+}
