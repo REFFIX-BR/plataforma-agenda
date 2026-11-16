@@ -43,3 +43,7 @@ yarn-error.*
 # local APK builds
 *.apk
 *.aab
+
+# local APK builds
+*.apk
+*.aab
