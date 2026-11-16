@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test src/server/domain.test.ts",
+    "db:create": "tsx scripts/db-create.ts",
     "db:setup": "tsx scripts/db-setup.ts",
-    "db:import": "tsx scripts/db-setup.ts --import data/db.json"
+    "db:import": "tsx scripts/db-create.ts --import data/db.json"
   },
   "dependencies": {
     "@rumo/core": "file:../../packages/core",
