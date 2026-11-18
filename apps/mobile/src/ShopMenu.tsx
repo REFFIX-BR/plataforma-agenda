@@ -316,7 +316,11 @@ function PanelSheetBody(props: {
 }) {
   const layout = useLayout()
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: props.colors.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: props.colors.bg }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+    >
       <View style={{ paddingTop: layout.top + 10, paddingHorizontal: layout.pad, paddingBottom: 12, flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: props.colors.line, backgroundColor: props.colors.surface }}>
         <Pressable onPress={props.onClose} hitSlop={10} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}>
           <Ionicons name="chevron-back" size={26} color={props.colors.ink} />
@@ -324,7 +328,12 @@ function PanelSheetBody(props: {
         <Text numberOfLines={1} style={{ flex: 1, textAlign: "center", color: props.colors.ink, fontSize: 18, fontWeight: "700" }}>{props.title}</Text>
         <View style={{ width: 44 }} />
       </View>
-      <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ padding: layout.pad, gap: 12, paddingBottom: layout.bottom + 36 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={{ padding: layout.pad, gap: 12, paddingBottom: layout.bottom + 220 }}
+      >
         {props.children}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -1269,32 +1278,6 @@ function PlanPanel(props: {
         </View>
       </SoftCard>
 
-      <SoftCard colors={props.colors} style={{ gap: 14 }}>
-        <Text style={{ color: props.colors.ink, fontWeight: "700", fontSize: 16 }}>Incluso no plano</Text>
-        {perks.map((perk) => (
-          <View key={perk.title} style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                backgroundColor: props.colors.bg,
-                borderWidth: 1,
-                borderColor: props.colors.line,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name={perk.icon} size={18} color={props.colors.primary} />
-            </View>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: props.colors.ink, fontWeight: "700" }}>{perk.title}</Text>
-              <Text style={{ color: props.colors.muted, lineHeight: 19 }}>{perk.hint}</Text>
-            </View>
-          </View>
-        ))}
-      </SoftCard>
-
       {!active && (
         <SoftCard colors={props.colors} style={{ gap: 12 }}>
           <View style={{ gap: 4 }}>
@@ -1302,9 +1285,14 @@ function PlanPanel(props: {
               {blocked ? "Assinar para continuar" : "Assinar plano"}
             </Text>
             <Text style={{ color: props.colors.muted, lineHeight: 20 }}>
-              Informe o CPF ou CNPJ da conta e finalize o pagamento no navegador.
+              Informe o CPF ou CNPJ e continue. O teclado sobe a tela — role se precisar.
             </Text>
           </View>
+          {!billing.configured && (
+            <Text style={{ color: props.colors.danger, lineHeight: 20 }}>
+              Asaas ainda não está configurada no servidor. Ajuste a ASAAS_API_KEY (com $$ no início) e reinicie o PM2.
+            </Text>
+          )}
           <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>CPF OU CNPJ</Text>
           <TextInput
             style={[props.input, { borderRadius: 14 }]}
@@ -1353,6 +1341,32 @@ function PlanPanel(props: {
           )}
         </SoftCard>
       )}
+
+      <SoftCard colors={props.colors} style={{ gap: 14 }}>
+        <Text style={{ color: props.colors.ink, fontWeight: "700", fontSize: 16 }}>Incluso no plano</Text>
+        {perks.map((perk) => (
+          <View key={perk.title} style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                backgroundColor: props.colors.bg,
+                borderWidth: 1,
+                borderColor: props.colors.line,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name={perk.icon} size={18} color={props.colors.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: props.colors.ink, fontWeight: "700" }}>{perk.title}</Text>
+              <Text style={{ color: props.colors.muted, lineHeight: 19 }}>{perk.hint}</Text>
+            </View>
+          </View>
+        ))}
+      </SoftCard>
 
       {active && (
         <SoftCard colors={props.colors} style={{ gap: 12 }}>

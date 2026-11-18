@@ -5,8 +5,21 @@ type AsaasErrorBody = {
   message?: string
 }
 
+/**
+ * Chaves Asaas começam com `$aact_...`.
+ * No .env do Next/dotenv-expand, use: ASAAS_API_KEY='$$aact_prod_...'
+ * ($$ vira um $; sem isso a variável some e o app cai em modo simulação).
+ */
+export function resolveAsaasApiKey() {
+  let key = (process.env.ASAAS_API_KEY || "").trim()
+  if (!key) return ""
+  // Se o $ inicial foi engolido na expansão, recupera o formato da Asaas.
+  if (/^aact_/i.test(key)) key = `$${key}`
+  return key
+}
+
 export function asaasConfigured() {
-  return Boolean(process.env.ASAAS_API_KEY?.trim())
+  return Boolean(resolveAsaasApiKey())
 }
 
 export function asaasSandbox() {
@@ -29,8 +42,13 @@ function asaasBaseUrl() {
 }
 
 function asaasHeaders() {
-  const key = process.env.ASAAS_API_KEY?.trim()
-  if (!key) throw new HttpError(503, "Asaas ainda não está configurado neste servidor.")
+  const key = resolveAsaasApiKey()
+  if (!key) {
+    throw new HttpError(
+      503,
+      "Asaas não configurada. No .env use ASAAS_API_KEY='$$aact_...' (dois $$ no início) e reinicie o PM2.",
+    )
+  }
   return {
     "Content-Type": "application/json",
     access_token: key,

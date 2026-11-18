@@ -264,6 +264,12 @@ function resolveBillingState(store: StoreRow, now = Date.now()) {
   return { status, access, trialEndsAt, nextDueDate, daysLeft, warnDays }
 }
 
+function wantsLiveAsaas() {
+  const sandbox = (process.env.ASAAS_USE_SANDBOX || "").toLowerCase()
+  const env = (process.env.ASAAS_ENV || "").toLowerCase()
+  return sandbox === "false" || sandbox === "0" || sandbox === "no" || env === "production"
+}
+
 /** Demo/simular só quando não há Asaas configurada. Sandbox e produção usam checkout real. */
 function isDemoBilling(_store?: StoreRow) {
   return !asaasConfigured()
@@ -1890,6 +1896,12 @@ export const domain = {
     }, true)
 
     if (prepared.demo) {
+      if (wantsLiveAsaas()) {
+        throw new HttpError(
+          503,
+          "ASAAS_API_KEY não foi lida neste servidor. No .env use aspas e dois $$: ASAAS_API_KEY='$$aact_prod_...' e rode pm2 restart agenda-api --update-env.",
+        )
+      }
       return withDb((db) => {
         const store = storeOf(db, prepared.storeId)
         store.billingStatus = "pending"
