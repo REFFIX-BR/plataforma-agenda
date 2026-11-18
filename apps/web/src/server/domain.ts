@@ -38,8 +38,7 @@ import { defaultProfessionName, isVerticalId, normalizeBrandColor, planCents, ve
 import {
   asaasConfigured,
   asaasCreateCheckout,
-  asaasCreateCustomer,
-  asaasUpdateCustomer,
+  asaasEnsureCustomerWithAddress,
   asaasUpdateSubscriptionValue,
   lookupBrazilAddress,
   nextDueDateIso,
@@ -1932,35 +1931,24 @@ export const domain = {
       complement: String(input.complement ?? "").trim() || undefined,
     }
 
-    let customerId = prepared.customerId
-    if (!customerId) {
-      const customer = await asaasCreateCustomer({
-        name: prepared.name,
-        email: prepared.email,
-        cpfCnpj: prepared.cpfCnpj,
-        phone: prepared.phone,
-        externalReference: prepared.storeId,
-        address,
-      })
-      customerId = customer.id
-      await withDb((db) => {
-        const store = storeOf(db, prepared.storeId)
-        store.asaasCustomerId = customerId
-        touch(store.id)
-        return true
-      }, true)
-    } else {
-      await asaasUpdateCustomer(customerId, {
-        name: prepared.name,
-        email: prepared.email,
-        cpfCnpj: prepared.cpfCnpj,
-        phone: prepared.phone,
-        address,
-      })
-    }
+    const customerId = await asaasEnsureCustomerWithAddress({
+      customerId: prepared.customerId,
+      name: prepared.name,
+      email: prepared.email,
+      cpfCnpj: prepared.cpfCnpj,
+      phone: prepared.phone,
+      externalReference: prepared.storeId,
+      address,
+    })
+
+    await withDb((db) => {
+      const store = storeOf(db, prepared.storeId)
+      store.asaasCustomerId = customerId
+      touch(store.id)
+      return true
+    }, true)
 
     const checkout = await asaasCreateCheckout({
-      customer: customerId!,
       name: prepared.name,
       email: prepared.email,
       cpfCnpj: prepared.cpfCnpj,
@@ -1981,14 +1969,14 @@ export const domain = {
       store.asaasCheckoutId = checkout.id
       store.asaasPayUrl = checkout.url
       store.checkoutPageToken = pageToken
-      store.checkoutUrl = prepared.pageUrl
+      // URL direta da Asaas — evita página intermediária e link antigo.
+      store.checkoutUrl = checkout.url
       store.nextDueDate = nextDueDateIso()
-      // Limpa qualquer id de simulação antigo ao gerar checkout real.
       if (store.asaasSubscriptionId?.startsWith("demo_")) store.asaasSubscriptionId = null
       touch(store.id)
       return {
         ...billingOf(db, store),
-        checkoutUrl: prepared.pageUrl,
+        checkoutUrl: checkout.url,
       }
     }, true)
   },

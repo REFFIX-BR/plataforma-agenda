@@ -176,14 +176,120 @@ export async function asaasUpdateCustomer(
   })
 }
 
+export async function asaasFindCustomerByCpf(cpfCnpj: string) {
+  const digits = onlyDigits(cpfCnpj)
+  const data = await asaasFetch<{ data?: { id: string }[] }>(
+    `/customers?cpfCnpj=${encodeURIComponent(digits)}&limit=1`,
+  )
+  return data.data?.[0] ?? null
+}
+
+export async function asaasGetCustomer(customerId: string) {
+  return asaasFetch<{
+    id: string
+    postalCode?: string | null
+    address?: string | null
+    addressNumber?: string | null
+    province?: string | null
+    city?: number | null
+  }>(`/customers/${encodeURIComponent(customerId)}`)
+}
+
+/** Garante cliente Asaas com endereço completo (CEP/ViaCEP/IBGE). */
+export async function asaasEnsureCustomerWithAddress(input: {
+  customerId?: string | null
+  name: string
+  email: string
+  cpfCnpj: string
+  phone?: string
+  externalReference: string
+  address: AsaasCustomerAddress
+}) {
+  let customerId = input.customerId || null
+  if (!customerId) {
+    const found = await asaasFindCustomerByCpf(input.cpfCnpj)
+    customerId = found?.id ?? null
+  }
+
+  if (!customerId) {
+    const created = await asaasCreateCustomer(input)
+    customerId = created.id
+  } else {
+    await asaasUpdateCustomer(customerId, input)
+  }
+
+  const current = await asaasGetCustomer(customerId)
+  const hasAddress = Boolean(
+    onlyDigits(String(current.postalCode || "")).length === 8 &&
+      String(current.address || "").trim() &&
+      String(current.addressNumber || "").trim() &&
+      String(current.province || "").trim() &&
+      current.city,
+  )
+  if (!hasAddress) {
+    // Segunda tentativa: só campos de endereço (Asaas preenche cidade pelo CEP).
+    await asaasFetch(`/customers/${encodeURIComponent(customerId)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        postalCode: onlyDigits(input.address.postalCode),
+        address: input.address.address,
+        addressNumber: input.address.addressNumber,
+        complement: input.address.complement || undefined,
+        province: input.address.province,
+        city: input.address.city,
+      }),
+    })
+  }
+
+  return customerId
+}
+
 function clipAsaasName(value: string, max = 30) {
   const text = value.replace(/\s+/g, " ").trim()
   if (text.length <= max) return text
   return `${text.slice(0, Math.max(1, max - 1)).trimEnd()}…`
 }
 
+function checkoutBody(input: {
+  value: number
+  nextDueDate: string
+  externalReference: string
+  description: string
+  successUrl: string
+  cancelUrl: string
+  customerData?: Record<string, unknown>
+}) {
+  const itemName = clipAsaasName(input.description, 30)
+  const itemDescription = clipAsaasName(input.description, 120)
+  return {
+    billingTypes: ["CREDIT_CARD"],
+    chargeTypes: ["RECURRENT"],
+    minutesToExpire: 60,
+    externalReference: input.externalReference,
+    ...(input.customerData ? { customerData: input.customerData } : {}),
+    items: [
+      {
+        name: itemName,
+        description: itemDescription,
+        quantity: 1,
+        value: input.value,
+      },
+    ],
+    subscription: {
+      cycle: "MONTHLY",
+      nextDueDate: input.nextDueDate,
+      description: itemDescription,
+      externalReference: input.externalReference,
+    },
+    callback: {
+      successUrl: input.successUrl,
+      cancelUrl: input.cancelUrl,
+      expiredUrl: input.cancelUrl,
+    },
+  }
+}
+
 export async function asaasCreateCheckout(input: {
-  customer: string
   name: string
   email: string
   cpfCnpj: string
@@ -196,55 +302,39 @@ export async function asaasCreateCheckout(input: {
   successUrl: string
   cancelUrl: string
 }) {
-  // Assinatura recorrente na Asaas Checkout: só CREDIT_CARD + RECURRENT.
-  // PIX exige DETACHED (avulso) e chave Pix cadastrada na conta Asaas.
-  // Envia customerData (não só customer id) para o checkout já ter endereço/CEP.
-  const itemName = clipAsaasName(input.description, 30)
-  const itemDescription = clipAsaasName(input.description, 120)
-  const created = await asaasFetch<{ id: string }>("/checkouts", {
-    method: "POST",
-    body: JSON.stringify({
-      billingTypes: ["CREDIT_CARD"],
-      chargeTypes: ["RECURRENT"],
-      minutesToExpire: 60,
-      externalReference: input.externalReference,
-      customerData: {
-        name: input.name,
-        email: input.email,
-        cpfCnpj: input.cpfCnpj,
-        phone: input.phone || undefined,
-        mobilePhone: input.phone || undefined,
-        postalCode: onlyDigits(input.address.postalCode),
-        address: input.address.address,
-        addressNumber: input.address.addressNumber,
-        complement: input.address.complement || undefined,
-        province: input.address.province,
-        city: input.address.city,
-      },
-      items: [
-        {
-          name: itemName,
-          description: itemDescription,
-          quantity: 1,
-          value: input.value,
-        },
-      ],
-      subscription: {
-        cycle: "MONTHLY",
-        nextDueDate: input.nextDueDate,
-        description: itemDescription,
-        externalReference: input.externalReference,
-      },
-      callback: {
-        successUrl: input.successUrl,
-        cancelUrl: input.cancelUrl,
-        expiredUrl: input.cancelUrl,
-      },
-    }),
-  })
-  return {
-    id: created.id,
-    url: asaasCheckoutUrl(created.id),
+  // Assinatura recorrente: CREDIT_CARD + RECURRENT.
+  // Nunca envia `customer` (id) — clientes antigos sem endereço quebram o checkout.
+  // Envia customerData completo; se a Asaas ainda recusar, tenta sem pré-preenchimento.
+  const customerData = {
+    name: input.name,
+    email: input.email,
+    cpfCnpj: onlyDigits(input.cpfCnpj),
+    phone: input.phone || undefined,
+    mobilePhone: input.phone || undefined,
+    postalCode: onlyDigits(input.address.postalCode),
+    address: input.address.address,
+    addressNumber: input.address.addressNumber,
+    complement: input.address.complement || undefined,
+    province: input.address.province,
+    city: input.address.city,
+  }
+
+  try {
+    const created = await asaasFetch<{ id: string }>("/checkouts", {
+      method: "POST",
+      body: JSON.stringify(checkoutBody({ ...input, customerData })),
+    })
+    return { id: created.id, url: asaasCheckoutUrl(created.id) }
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : ""
+    const addressBlocked =
+      /address|addressNumber|postalCode|province|city|customer informado/i.test(message)
+    if (!addressBlocked) throw cause
+    const created = await asaasFetch<{ id: string }>("/checkouts", {
+      method: "POST",
+      body: JSON.stringify(checkoutBody(input)),
+    })
+    return { id: created.id, url: asaasCheckoutUrl(created.id) }
   }
 }
 
