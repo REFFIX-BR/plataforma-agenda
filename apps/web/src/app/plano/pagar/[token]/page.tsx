@@ -217,7 +217,7 @@ export default function CheckoutPayPage() {
 
               <div className="grid gap-2 text-sm text-[color:var(--muted)]">
                 <p>✓ Agenda, equipe e clientes liberados por 30 dias</p>
-                <p>✓ Pix ou cartão na página segura da Asaas</p>
+                <p>✓ Cartão na página segura da Asaas (assinatura mensal)</p>
                 <p>✓ Cancele quando quiser pelo suporte Agenda</p>
               </div>
 
