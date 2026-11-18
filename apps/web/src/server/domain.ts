@@ -39,7 +39,6 @@ import {
   asaasConfigured,
   asaasCreateCheckout,
   asaasCreateCustomer,
-  asaasSandbox,
   asaasUpdateSubscriptionValue,
   nextDueDateIso,
   onlyDigits,
@@ -265,8 +264,9 @@ function resolveBillingState(store: StoreRow, now = Date.now()) {
   return { status, access, trialEndsAt, nextDueDate, daysLeft, warnDays }
 }
 
-function isDemoBilling(store: StoreRow) {
-  return !asaasConfigured() || Boolean(store.asaasCheckoutId?.startsWith("demo_")) || asaasSandbox()
+/** Demo/simular só quando não há Asaas configurada. Sandbox e produção usam checkout real. */
+function isDemoBilling(_store?: StoreRow) {
+  return !asaasConfigured()
 }
 
 function billingOf(db: DB, store: StoreRow): BillingSnapshot {
@@ -1884,7 +1884,7 @@ export const domain = {
         seats,
         totalCents,
         customerId: store.asaasCustomerId ?? null,
-        demo: !asaasConfigured() || asaasSandbox(),
+        demo: isDemoBilling(),
         pageUrl: `${appBaseUrl()}/plano/pagar/${pageToken}`,
       }
     }, true)
@@ -1943,6 +1943,8 @@ export const domain = {
       store.checkoutPageToken = pageToken
       store.checkoutUrl = prepared.pageUrl
       store.nextDueDate = nextDueDateIso()
+      // Limpa qualquer id de simulação antigo ao gerar checkout real.
+      if (store.asaasSubscriptionId?.startsWith("demo_")) store.asaasSubscriptionId = null
       touch(store.id)
       return {
         ...billingOf(db, store),
@@ -1979,7 +1981,7 @@ export const domain = {
       const owner = requireOwner(db, userId)
       const store = storeOf(db, owner.storeId)
       if (!isDemoBilling(store)) {
-        throw new HttpError(400, "Com Asaas em produção, o pagamento entra pelo checkout real.")
+        throw new HttpError(400, "Pagamento só pelo checkout da Asaas. Simulação desligada neste servidor.")
       }
       store.billingStatus = "active"
       store.lastPaidAt = new Date().toISOString()
@@ -1998,7 +2000,7 @@ export const domain = {
       const store = db.stores.find((item) => item.checkoutPageToken === token)
       if (!store) throw new HttpError(404, "Checkout não encontrado.")
       if (!isDemoBilling(store)) {
-        throw new HttpError(400, "Com Asaas em produção, o pagamento entra pelo checkout real.")
+        throw new HttpError(400, "Pagamento só pelo checkout da Asaas. Simulação desligada neste servidor.")
       }
       const seats = seatCountOf(db, store.id)
       store.billingStatus = "active"
