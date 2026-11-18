@@ -43,6 +43,7 @@ import {
   lookupBrazilAddress,
   nextDueDateIso,
   onlyDigits,
+  planPeriodEndIso,
   planValueReais,
   validCpfCnpj,
 } from "./asaas"
@@ -2069,9 +2070,12 @@ export const domain = {
       (typeof subscription?.customer === "string" && subscription.customer) ||
       null
 
+    const checkoutId = typeof checkout?.id === "string" ? checkout.id : null
+
     return withDb((db) => {
       const store =
         (external ? db.stores.find((item) => item.id === external) : null) ||
+        (checkoutId ? db.stores.find((item) => item.asaasCheckoutId === checkoutId) : null) ||
         (subscriptionId ? db.stores.find((item) => item.asaasSubscriptionId === subscriptionId) : null) ||
         (customerId ? db.stores.find((item) => item.asaasCustomerId === customerId) : null) ||
         null
@@ -2089,8 +2093,19 @@ export const domain = {
         store.billingStatus = "active"
         store.lastPaidAt = new Date().toISOString()
         store.checkoutUrl = null
-        if (typeof payment?.dueDate === "string") store.nextDueDate = payment.dueDate
-        else if (typeof subscription?.nextDueDate === "string") store.nextDueDate = subscription.nextDueDate
+        store.asaasPayUrl = null
+        // Pix é avulso: marca o período pago (30 dias). Sem assinatura automática na Asaas.
+        if (!store.asaasSubscriptionId) {
+          const checkoutId = typeof checkout?.id === "string" ? checkout.id : store.asaasCheckoutId
+          const paymentId = typeof payment?.id === "string" ? payment.id : null
+          store.asaasSubscriptionId = checkoutId
+            ? `pix_${checkoutId}`
+            : paymentId
+              ? `pix_${paymentId}`
+              : `pix_${store.id}`
+        }
+        if (typeof subscription?.nextDueDate === "string") store.nextDueDate = subscription.nextDueDate
+        else store.nextDueDate = planPeriodEndIso()
       }
       if (event === "PAYMENT_OVERDUE" || event === "SUBSCRIPTION_INACTIVATED") {
         store.billingStatus = "past_due"

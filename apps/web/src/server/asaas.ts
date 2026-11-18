@@ -252,7 +252,6 @@ function clipAsaasName(value: string, max = 30) {
 
 function checkoutBody(input: {
   value: number
-  nextDueDate: string
   externalReference: string
   description: string
   successUrl: string
@@ -261,9 +260,11 @@ function checkoutBody(input: {
 }) {
   const itemName = clipAsaasName(input.description, 30)
   const itemDescription = clipAsaasName(input.description, 120)
+  // Pix no Checkout Asaas: só PIX + DETACHED (avulso).
+  // RECURRENT exige cartão. Chave Pix precisa estar cadastrada na conta Asaas.
   return {
-    billingTypes: ["CREDIT_CARD"],
-    chargeTypes: ["RECURRENT"],
+    billingTypes: ["PIX"],
+    chargeTypes: ["DETACHED"],
     minutesToExpire: 60,
     externalReference: input.externalReference,
     ...(input.customerData ? { customerData: input.customerData } : {}),
@@ -275,12 +276,6 @@ function checkoutBody(input: {
         value: input.value,
       },
     ],
-    subscription: {
-      cycle: "MONTHLY",
-      nextDueDate: input.nextDueDate,
-      description: itemDescription,
-      externalReference: input.externalReference,
-    },
     callback: {
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
@@ -302,9 +297,7 @@ export async function asaasCreateCheckout(input: {
   successUrl: string
   cancelUrl: string
 }) {
-  // Assinatura recorrente: CREDIT_CARD + RECURRENT.
-  // Nunca envia `customer` (id) — clientes antigos sem endereço quebram o checkout.
-  // Envia customerData completo; se a Asaas ainda recusar, tenta sem pré-preenchimento.
+  // Só Pix. Nunca envia `customer` (id) — evita cadastro antigo sem endereço.
   const customerData = {
     name: input.name,
     email: input.email,
@@ -365,5 +358,12 @@ export function planValueReais(planCents: number) {
 export function nextDueDateIso(from = new Date()) {
   const date = new Date(from)
   date.setUTCDate(date.getUTCDate() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+/** Validade de 1 mês após pagamento Pix avulso. */
+export function planPeriodEndIso(from = new Date()) {
+  const date = new Date(from)
+  date.setUTCDate(date.getUTCDate() + 30)
   return date.toISOString().slice(0, 10)
 }

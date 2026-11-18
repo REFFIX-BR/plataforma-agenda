@@ -1170,7 +1170,7 @@ function PlanPanel(props: {
     { icon: "calendar-outline" as const, title: "Agenda completa", hint: "Horários, clientes e equipe no mesmo lugar." },
     { icon: "gift-outline" as const, title: "7 dias grátis", hint: "Teste tudo antes de assinar." },
     { icon: "people-outline" as const, title: "Equipe sob medida", hint: `Cada pessoa da equipe ativa soma ${formatBRL(billing.seatPriceCents)}.` },
-    { icon: "card-outline" as const, title: "Cartão na Asaas", hint: "Assinatura mensal no checkout seguro da Asaas." },
+    { icon: "qr-code-outline" as const, title: "Pix na Asaas", hint: "Pague 1 mês via Pix no checkout seguro da Asaas." },
   ]
 
   return (
@@ -1293,7 +1293,7 @@ function PlanPanel(props: {
               {blocked ? "Assinar para continuar" : "Assinar plano"}
             </Text>
             <Text style={{ color: props.colors.muted, lineHeight: 20 }}>
-              Informe CPF/CNPJ, CEP e número. A Asaas exige endereço para assinar no cartão.
+              Informe CPF/CNPJ, CEP e número. O pagamento é só via Pix na Asaas (1 mês).
             </Text>
           </View>
           {!billing.configured && (

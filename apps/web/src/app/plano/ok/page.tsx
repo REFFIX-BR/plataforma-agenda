@@ -11,7 +11,7 @@ export default function PlanoOkPage() {
           <p className="text-sm font-semibold tracking-[0.18em] text-[color:var(--primary)]">PAGAMENTO</p>
           <h1 className="serif text-5xl leading-none">Quase lá</h1>
           <p className="text-lg leading-relaxed text-[color:var(--muted)]">
-            Se o Pix ou o cartão confirmar, a assinatura ativa sozinha. Volte ao app e abra Menu → Plano.
+            Se o Pix confirmar, o plano libera sozinho por 1 mês. Volte ao app e abra Menu → Plano.
           </p>
         </div>
       </main>
