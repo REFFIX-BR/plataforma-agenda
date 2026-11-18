@@ -7,13 +7,24 @@ type AsaasErrorBody = {
 
 /**
  * Chaves Asaas começam com `$aact_...`.
- * No .env do Next/dotenv-expand, use: ASAAS_API_KEY='$$aact_prod_...'
- * ($$ vira um $; sem isso a variável some e o app cai em modo simulação).
+ * No .env, qualquer um destes formatos funciona:
+ *   ASAAS_API_KEY=$aact_prod_...
+ *   ASAAS_API_KEY=$$aact_prod_...
+ *   ASAAS_API_KEY='$aact_prod_...'
  */
 export function resolveAsaasApiKey() {
   let key = (process.env.ASAAS_API_KEY || "").trim()
   if (!key) return ""
-  // Se o $ inicial foi engolido na expansão, recupera o formato da Asaas.
+  // Remove aspas se o .env trouxe junto.
+  if (
+    (key.startsWith("'") && key.endsWith("'")) ||
+    (key.startsWith('"') && key.endsWith('"'))
+  ) {
+    key = key.slice(1, -1).trim()
+  }
+  // dotenv-expand: $$ → $; se ficou literal "$$aact_", corrige.
+  if (key.startsWith("$$")) key = key.slice(1)
+  // Se o $ inicial foi engolido, recoloca.
   if (/^aact_/i.test(key)) key = `$${key}`
   return key
 }
