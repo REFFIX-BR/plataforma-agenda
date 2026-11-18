@@ -103,6 +103,12 @@ export async function asaasCreateCustomer(input: {
   })
 }
 
+function clipAsaasName(value: string, max = 30) {
+  const text = value.replace(/\s+/g, " ").trim()
+  if (text.length <= max) return text
+  return `${text.slice(0, Math.max(1, max - 1)).trimEnd()}…`
+}
+
 export async function asaasCreateCheckout(input: {
   customer: string
   value: number
@@ -112,18 +118,22 @@ export async function asaasCreateCheckout(input: {
   successUrl: string
   cancelUrl: string
 }) {
+  // Assinatura recorrente na Asaas Checkout: só CREDIT_CARD + RECURRENT.
+  // PIX exige DETACHED (avulso) e chave Pix cadastrada na conta Asaas.
+  const itemName = clipAsaasName(input.description, 30)
+  const itemDescription = clipAsaasName(input.description, 120)
   const created = await asaasFetch<{ id: string }>("/checkouts", {
     method: "POST",
     body: JSON.stringify({
-      billingTypes: ["PIX", "CREDIT_CARD"],
+      billingTypes: ["CREDIT_CARD"],
       chargeTypes: ["RECURRENT"],
       minutesToExpire: 60,
       externalReference: input.externalReference,
       customer: input.customer,
       items: [
         {
-          name: input.description,
-          description: input.description,
+          name: itemName,
+          description: itemDescription,
           quantity: 1,
           value: input.value,
         },
@@ -131,7 +141,7 @@ export async function asaasCreateCheckout(input: {
       subscription: {
         cycle: "MONTHLY",
         nextDueDate: input.nextDueDate,
-        description: input.description,
+        description: itemDescription,
         externalReference: input.externalReference,
       },
       callback: {

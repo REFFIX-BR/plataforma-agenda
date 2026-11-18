@@ -1162,7 +1162,7 @@ function PlanPanel(props: {
     { icon: "calendar-outline" as const, title: "Agenda completa", hint: "Horários, clientes e equipe no mesmo lugar." },
     { icon: "gift-outline" as const, title: "7 dias grátis", hint: "Teste tudo antes de assinar." },
     { icon: "people-outline" as const, title: "Equipe sob medida", hint: `Cada pessoa da equipe ativa soma ${formatBRL(billing.seatPriceCents)}.` },
-    { icon: "card-outline" as const, title: "Pix ou cartão", hint: "Pagamento seguro na página de checkout." },
+    { icon: "card-outline" as const, title: "Cartão na Asaas", hint: "Assinatura mensal no checkout seguro da Asaas." },
   ]
 
   return (
