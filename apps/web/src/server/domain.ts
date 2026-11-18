@@ -1899,7 +1899,7 @@ export const domain = {
       if (wantsLiveAsaas()) {
         throw new HttpError(
           503,
-          "ASAAS_API_KEY não foi lida neste servidor. No .env use aspas e dois $$: ASAAS_API_KEY='$$aact_prod_...' e rode pm2 restart agenda-api --update-env.",
+          "ASAAS_API_KEY não foi lida. No .env coloque SEM o $ inicial: ASAAS_API_KEY=aact_prod_... e rode: pm2 restart agenda-api --update-env",
         )
       }
       return withDb((db) => {

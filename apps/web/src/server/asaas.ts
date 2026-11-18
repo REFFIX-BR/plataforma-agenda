@@ -6,27 +6,28 @@ type AsaasErrorBody = {
 }
 
 /**
- * Chaves Asaas começam com `$aact_...`.
- * No .env, qualquer um destes formatos funciona:
- *   ASAAS_API_KEY=$aact_prod_...
- *   ASAAS_API_KEY=$$aact_prod_...
- *   ASAAS_API_KEY='$aact_prod_...'
+ * Chaves Asaas oficiais começam com `$aact_...`.
+ * No .env NÃO coloque o $ inicial (o dotenv engole). Use:
+ *   ASAAS_API_KEY=aact_prod_sua_chave_aqui
+ * O código recoloca o $ na hora de chamar a Asaas.
  */
 export function resolveAsaasApiKey() {
   let key = (process.env.ASAAS_API_KEY || "").trim()
   if (!key) return ""
-  // Remove aspas se o .env trouxe junto.
   if (
     (key.startsWith("'") && key.endsWith("'")) ||
     (key.startsWith('"') && key.endsWith('"'))
   ) {
     key = key.slice(1, -1).trim()
   }
-  // dotenv-expand: $$ → $; se ficou literal "$$aact_", corrige.
-  if (key.startsWith("$$")) key = key.slice(1)
-  // Se o $ inicial foi engolido, recoloca.
-  if (/^aact_/i.test(key)) key = `$${key}`
-  return key
+  // Remove $ / $$ sobrando no começo e normaliza.
+  while (key.startsWith("$")) key = key.slice(1)
+  key = key.trim()
+  if (!key) return ""
+  if (/^aact_/i.test(key)) return `$${key}`
+  // Se já veio completa por outro meio
+  if (/^\$aact_/i.test(key)) return key
+  return key.startsWith("$") ? key : `$${key}`
 }
 
 export function asaasConfigured() {
