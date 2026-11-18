@@ -39,7 +39,9 @@ import {
   asaasConfigured,
   asaasCreateCheckout,
   asaasCreateCustomer,
+  asaasUpdateCustomer,
   asaasUpdateSubscriptionValue,
+  lookupBrazilAddress,
   nextDueDateIso,
   onlyDigits,
   planValueReais,
@@ -1867,6 +1869,11 @@ export const domain = {
 
   async createBillingCheckout(userId: string, input: Record<string, unknown>) {
     const pageToken = id()
+    const postalCode = onlyDigits(String(input.postalCode ?? input.cep ?? ""))
+    const addressNumber = String(input.addressNumber ?? input.number ?? "").trim()
+    if (postalCode.length !== 8) throw new HttpError(400, "Informe o CEP da conta (8 dígitos).")
+    if (!addressNumber) throw new HttpError(400, "Informe o número do endereço.")
+
     const prepared = await withDb((db) => {
       const owner = requireOwner(db, userId)
       const store = storeOf(db, owner.storeId)
@@ -1918,6 +1925,13 @@ export const domain = {
       }, true)
     }
 
+    const fromCep = await lookupBrazilAddress(postalCode)
+    const address = {
+      ...fromCep,
+      addressNumber,
+      complement: String(input.complement ?? "").trim() || undefined,
+    }
+
     let customerId = prepared.customerId
     if (!customerId) {
       const customer = await asaasCreateCustomer({
@@ -1926,6 +1940,7 @@ export const domain = {
         cpfCnpj: prepared.cpfCnpj,
         phone: prepared.phone,
         externalReference: prepared.storeId,
+        address,
       })
       customerId = customer.id
       await withDb((db) => {
@@ -1934,10 +1949,23 @@ export const domain = {
         touch(store.id)
         return true
       }, true)
+    } else {
+      await asaasUpdateCustomer(customerId, {
+        name: prepared.name,
+        email: prepared.email,
+        cpfCnpj: prepared.cpfCnpj,
+        phone: prepared.phone,
+        address,
+      })
     }
 
     const checkout = await asaasCreateCheckout({
       customer: customerId!,
+      name: prepared.name,
+      email: prepared.email,
+      cpfCnpj: prepared.cpfCnpj,
+      phone: prepared.phone,
+      address,
       value: planValueReais(prepared.totalCents),
       nextDueDate: nextDueDateIso(),
       externalReference: prepared.storeId,

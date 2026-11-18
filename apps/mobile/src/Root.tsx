@@ -422,6 +422,8 @@ function Main(props: {
   const [billingWarn, setBillingWarn] = useState<5 | 3 | 1 | null>(null)
   const [paidOk, setPaidOk] = useState(false)
   const [renewCpf, setRenewCpf] = useState("")
+  const [renewCep, setRenewCep] = useState("")
+  const [renewNumber, setRenewNumber] = useState("")
   const [renewBusy, setRenewBusy] = useState(false)
   const [renewError, setRenewError] = useState("")
   const [renewDemo, setRenewDemo] = useState(false)
@@ -489,7 +491,7 @@ function Main(props: {
     try {
       const next = await api<BillingSnapshot>("/api/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ cpfCnpj: renewCpf }),
+        body: JSON.stringify({ cpfCnpj: renewCpf, postalCode: renewCep, addressNumber: renewNumber }),
       })
       setRenewDemo(Boolean(next.demo))
       if (next.cpfCnpj) setRenewCpf(formatDocInput(next.cpfCnpj))
@@ -703,6 +705,25 @@ function Main(props: {
                       placeholder="000.000.000-00"
                       placeholderTextColor={props.colors.muted}
                       keyboardType="number-pad"
+                      editable={!renewBusy}
+                    />
+                    <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>CEP</Text>
+                    <TextInput
+                      style={[props.input, { borderRadius: 14 }]}
+                      value={renewCep}
+                      onChangeText={(value) => setRenewCep(formatCepInput(value))}
+                      placeholder="00000-000"
+                      placeholderTextColor={props.colors.muted}
+                      keyboardType="number-pad"
+                      editable={!renewBusy}
+                    />
+                    <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>NÚMERO</Text>
+                    <TextInput
+                      style={[props.input, { borderRadius: 14 }]}
+                      value={renewNumber}
+                      onChangeText={setRenewNumber}
+                      placeholder="123"
+                      placeholderTextColor={props.colors.muted}
                       editable={!renewBusy}
                     />
                     {!!renewError && <Text style={{ color: props.colors.danger }}>{renewError}</Text>}
@@ -1608,6 +1629,12 @@ function formatDocInput(value: string) {
     .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
     .replace(/\.(\d{3})(\d)/, ".$1/$2")
     .replace(/(\d{4})(\d)/, "$1-$2")
+}
+
+function formatCepInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8)
+  if (digits.length <= 5) return digits
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`
 }
 
 async function resolveCheckoutUrl(url: string) {

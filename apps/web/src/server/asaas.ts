@@ -83,23 +83,96 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T
 }
 
+export type AsaasCustomerAddress = {
+  postalCode: string
+  address: string
+  addressNumber: string
+  province: string
+  /** Código IBGE do município — exigido pela Asaas no checkout. */
+  city: number
+  cityName: string
+  complement?: string
+}
+
+export async function lookupBrazilAddress(postalCode: string): Promise<AsaasCustomerAddress> {
+  const cep = onlyDigits(postalCode)
+  if (cep.length !== 8) throw new HttpError(400, "Informe um CEP com 8 dígitos.")
+  const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+  const data = (await response.json().catch(() => ({}))) as {
+    erro?: boolean
+    logradouro?: string
+    bairro?: string
+    localidade?: string
+    ibge?: string
+    uf?: string
+  }
+  if (!response.ok || data.erro) throw new HttpError(400, "CEP não encontrado. Confira e tente de novo.")
+  const address = (data.logradouro || "").trim() || "Endereço"
+  const province = (data.bairro || "").trim() || (data.localidade || "").trim() || "Centro"
+  const cityName = (data.localidade || "").trim()
+  const city = Number(onlyDigits(String(data.ibge || "")))
+  if (!cityName || !city) throw new HttpError(400, "Não deu para ler a cidade desse CEP.")
+  return {
+    postalCode: cep,
+    address,
+    addressNumber: "S/N",
+    province,
+    city,
+    cityName,
+  }
+}
+
+function customerPayload(input: {
+  name: string
+  email: string
+  cpfCnpj: string
+  phone?: string
+  externalReference?: string
+  address: AsaasCustomerAddress
+}) {
+  return {
+    name: input.name,
+    email: input.email,
+    cpfCnpj: input.cpfCnpj,
+    mobilePhone: input.phone || undefined,
+    externalReference: input.externalReference,
+    notificationDisabled: true,
+    postalCode: onlyDigits(input.address.postalCode),
+    address: input.address.address,
+    addressNumber: input.address.addressNumber,
+    complement: input.address.complement || undefined,
+    province: input.address.province,
+    city: input.address.city,
+  }
+}
+
 export async function asaasCreateCustomer(input: {
   name: string
   email: string
   cpfCnpj: string
   phone?: string
   externalReference: string
+  address: AsaasCustomerAddress
 }) {
   return asaasFetch<{ id: string }>("/customers", {
     method: "POST",
-    body: JSON.stringify({
-      name: input.name,
-      email: input.email,
-      cpfCnpj: input.cpfCnpj,
-      mobilePhone: input.phone || undefined,
-      externalReference: input.externalReference,
-      notificationDisabled: true,
-    }),
+    body: JSON.stringify(customerPayload(input)),
+  })
+}
+
+export async function asaasUpdateCustomer(
+  customerId: string,
+  input: {
+    name: string
+    email: string
+    cpfCnpj: string
+    phone?: string
+    address: AsaasCustomerAddress
+  },
+) {
+  return asaasFetch<{ id: string }>(`/customers/${encodeURIComponent(customerId)}`, {
+    method: "PUT",
+    body: JSON.stringify(customerPayload(input)),
   })
 }
 
@@ -111,6 +184,11 @@ function clipAsaasName(value: string, max = 30) {
 
 export async function asaasCreateCheckout(input: {
   customer: string
+  name: string
+  email: string
+  cpfCnpj: string
+  phone?: string
+  address: AsaasCustomerAddress
   value: number
   nextDueDate: string
   externalReference: string
@@ -120,6 +198,7 @@ export async function asaasCreateCheckout(input: {
 }) {
   // Assinatura recorrente na Asaas Checkout: só CREDIT_CARD + RECURRENT.
   // PIX exige DETACHED (avulso) e chave Pix cadastrada na conta Asaas.
+  // Envia customerData (não só customer id) para o checkout já ter endereço/CEP.
   const itemName = clipAsaasName(input.description, 30)
   const itemDescription = clipAsaasName(input.description, 120)
   const created = await asaasFetch<{ id: string }>("/checkouts", {
@@ -129,7 +208,19 @@ export async function asaasCreateCheckout(input: {
       chargeTypes: ["RECURRENT"],
       minutesToExpire: 60,
       externalReference: input.externalReference,
-      customer: input.customer,
+      customerData: {
+        name: input.name,
+        email: input.email,
+        cpfCnpj: input.cpfCnpj,
+        phone: input.phone || undefined,
+        mobilePhone: input.phone || undefined,
+        postalCode: onlyDigits(input.address.postalCode),
+        address: input.address.address,
+        addressNumber: input.address.addressNumber,
+        complement: input.address.complement || undefined,
+        province: input.address.province,
+        city: input.address.city,
+      },
       items: [
         {
           name: itemName,
