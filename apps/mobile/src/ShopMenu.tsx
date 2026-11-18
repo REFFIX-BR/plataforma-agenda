@@ -1021,12 +1021,6 @@ function formatDocInput(value: string) {
     .replace(/(\d{4})(\d)/, "$1-$2")
 }
 
-function formatCepInput(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 8)
-  if (digits.length <= 5) return digits
-  return `${digits.slice(0, 5)}-${digits.slice(5)}`
-}
-
 function PlanPanel(props: {
   colors: Paint
   input: TextStyle
@@ -1036,8 +1030,6 @@ function PlanPanel(props: {
 }) {
   const [billing, setBilling] = useState<BillingSnapshot | null>(null)
   const [cpfCnpj, setCpfCnpj] = useState("")
-  const [postalCode, setPostalCode] = useState("")
-  const [addressNumber, setAddressNumber] = useState("")
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
@@ -1102,7 +1094,7 @@ function PlanPanel(props: {
     try {
       const next = await api<BillingSnapshot>("/api/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ cpfCnpj, postalCode, addressNumber }),
+        body: JSON.stringify({ cpfCnpj }),
       })
       setBilling(next)
       if (next.checkoutUrl) await openExternal(next.checkoutUrl)
@@ -1297,7 +1289,7 @@ function PlanPanel(props: {
               {blocked ? "Assinar para continuar" : "Assinar plano"}
             </Text>
             <Text style={{ color: props.colors.muted, lineHeight: 20 }}>
-              Informe CPF/CNPJ, CEP e número. Você compra 30 dias de acesso via Pix.
+              Informe o CPF ou CNPJ e pague o Pix. Libera 30 dias de acesso.
             </Text>
           </View>
           {!billing.configured && (
@@ -1314,24 +1306,6 @@ function PlanPanel(props: {
             placeholderTextColor={props.colors.muted}
             keyboardType="number-pad"
           />
-          <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>CEP</Text>
-          <TextInput
-            style={[props.input, { borderRadius: 14 }]}
-            value={postalCode}
-            onChangeText={(value) => setPostalCode(formatCepInput(value))}
-            placeholder="00000-000"
-            placeholderTextColor={props.colors.muted}
-            keyboardType="number-pad"
-          />
-          <Text style={{ color: props.colors.muted, fontSize: 12, fontWeight: "700", letterSpacing: 0.6 }}>NÚMERO</Text>
-          <TextInput
-            style={[props.input, { borderRadius: 14 }]}
-            value={addressNumber}
-            onChangeText={setAddressNumber}
-            placeholder="123"
-            placeholderTextColor={props.colors.muted}
-            keyboardType="default"
-          />
           <SoftPress
             style={[props.button, { borderRadius: 16, paddingVertical: 16, opacity: busy ? 0.7 : 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }]}
             onPress={() => void startCheckout()}
@@ -1340,10 +1314,10 @@ function PlanPanel(props: {
             {busy ? (
               <ActivityIndicator color={props.colors.onPrimary} />
             ) : (
-              <Ionicons name="open-outline" size={18} color={props.colors.onPrimary} />
+              <Ionicons name="qr-code-outline" size={18} color={props.colors.onPrimary} />
             )}
             <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>
-              {busy ? "Abrindo checkout..." : "Ir para o pagamento"}
+              {busy ? "Abrindo Pix..." : "Pagar com Pix"}
             </Text>
           </SoftPress>
           {billing.checkoutUrl && billing.status === "pending" && (

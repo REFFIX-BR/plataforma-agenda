@@ -247,7 +247,21 @@ export async function asaasEnsureCustomerWithAddress(input: {
 function clipAsaasName(value: string, max = 30) {
   const text = value.replace(/\s+/g, " ").trim()
   if (text.length <= max) return text
-  return `${text.slice(0, Math.max(1, max - 1)).trimEnd()}…`
+  return text.slice(0, max).trimEnd()
+}
+
+/** Asaas exige nome “limpo”; costuma rejeitar vazio, 1 palavra só ou símbolos. */
+export function asaasSafePersonName(value: string, fallback = "Cliente Agenda") {
+  const cleaned = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const parts = cleaned.split(" ").filter(Boolean)
+  if (parts.length >= 2) return clipAsaasName(parts.slice(0, 4).join(" "), 60)
+  if (parts.length === 1 && parts[0].length >= 2) return clipAsaasName(`${parts[0]} Agenda`, 60)
+  return fallback
 }
 
 function checkoutBody(input: {
@@ -258,10 +272,10 @@ function checkoutBody(input: {
   cancelUrl: string
   customerData?: Record<string, unknown>
 }) {
-  const itemName = clipAsaasName(input.description, 30)
-  const itemDescription = clipAsaasName(input.description, 120)
+  // Item simples — “·” e textos longos geram "name inválido" na Asaas.
+  const itemName = clipAsaasName(input.description.replace(/[·•]/g, "-").replace(/\s+/g, " ").trim() || "Agenda 30 dias", 30)
+  const itemDescription = clipAsaasName(itemName, 120)
   // Pix no Checkout Asaas: só PIX + DETACHED (avulso).
-  // RECURRENT exige cartão. Chave Pix precisa estar cadastrada na conta Asaas.
   return {
     billingTypes: ["PIX"],
     chargeTypes: ["DETACHED"],
@@ -289,43 +303,51 @@ export async function asaasCreateCheckout(input: {
   email: string
   cpfCnpj: string
   phone?: string
-  address: AsaasCustomerAddress
   value: number
-  nextDueDate: string
   externalReference: string
   description: string
   successUrl: string
   cancelUrl: string
 }) {
-  // Só Pix. Nunca envia `customer` (id) — evita cadastro antigo sem endereço.
+  // Só CPF + dados básicos. Sem endereço. Sem customer id antigo.
   const customerData = {
-    name: input.name,
+    name: asaasSafePersonName(input.name, asaasSafePersonName(input.email.split("@")[0] || "", "Cliente Agenda")),
     email: input.email,
     cpfCnpj: onlyDigits(input.cpfCnpj),
     phone: input.phone || undefined,
     mobilePhone: input.phone || undefined,
-    postalCode: onlyDigits(input.address.postalCode),
-    address: input.address.address,
-    addressNumber: input.address.addressNumber,
-    complement: input.address.complement || undefined,
-    province: input.address.province,
-    city: input.address.city,
   }
 
   try {
     const created = await asaasFetch<{ id: string }>("/checkouts", {
       method: "POST",
-      body: JSON.stringify(checkoutBody({ ...input, customerData })),
+      body: JSON.stringify(
+        checkoutBody({
+          value: input.value,
+          externalReference: input.externalReference,
+          description: input.description,
+          successUrl: input.successUrl,
+          cancelUrl: input.cancelUrl,
+          customerData,
+        }),
+      ),
     })
     return { id: created.id, url: asaasCheckoutUrl(created.id) }
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : ""
-    const addressBlocked =
-      /address|addressNumber|postalCode|province|city|customer informado/i.test(message)
-    if (!addressBlocked) throw cause
+    // Se nome/endereço ainda travar, abre Pix puro — pagador completa na Asaas.
+    if (!/name|address|postalCode|customer|cpf|cnpj/i.test(message)) throw cause
     const created = await asaasFetch<{ id: string }>("/checkouts", {
       method: "POST",
-      body: JSON.stringify(checkoutBody(input)),
+      body: JSON.stringify(
+        checkoutBody({
+          value: input.value,
+          externalReference: input.externalReference,
+          description: "Agenda 30 dias",
+          successUrl: input.successUrl,
+          cancelUrl: input.cancelUrl,
+        }),
+      ),
     })
     return { id: created.id, url: asaasCheckoutUrl(created.id) }
   }

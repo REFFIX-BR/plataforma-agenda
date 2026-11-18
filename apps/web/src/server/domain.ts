@@ -38,9 +38,7 @@ import { defaultProfessionName, isVerticalId, normalizeBrandColor, planCents, ve
 import {
   asaasConfigured,
   asaasCreateCheckout,
-  asaasEnsureCustomerWithAddress,
   asaasUpdateSubscriptionValue,
-  lookupBrazilAddress,
   nextDueDateIso,
   onlyDigits,
   planPeriodEndIso,
@@ -1871,10 +1869,6 @@ export const domain = {
 
   async createBillingCheckout(userId: string, input: Record<string, unknown>) {
     const pageToken = id()
-    const postalCode = onlyDigits(String(input.postalCode ?? input.cep ?? ""))
-    const addressNumber = String(input.addressNumber ?? input.number ?? "").trim()
-    if (postalCode.length !== 8) throw new HttpError(400, "Informe o CEP da conta (8 dígitos).")
-    if (!addressNumber) throw new HttpError(400, "Informe o número do endereço.")
 
     const prepared = await withDb((db) => {
       const owner = requireOwner(db, userId)
@@ -1890,11 +1884,9 @@ export const domain = {
       return {
         storeId: store.id,
         storeName: store.name,
-        vertical: store.vertical,
-        brandColor: store.brandColor ?? null,
         phone: store.phone,
         email: user.email,
-        name: owner.fullName || user.name,
+        name: owner.fullName || user.name || store.name,
         cpfCnpj,
         seats,
         totalCents,
@@ -1918,7 +1910,6 @@ export const domain = {
         store.asaasPayUrl = null
         store.asaasCheckoutId = `demo_${prepared.storeId}`
         store.checkoutPageToken = pageToken
-        store.nextDueDate = nextDueDateIso()
         touch(store.id)
         return {
           ...billingOf(db, store),
@@ -1927,40 +1918,15 @@ export const domain = {
       }, true)
     }
 
-    const fromCep = await lookupBrazilAddress(postalCode)
-    const address = {
-      ...fromCep,
-      addressNumber,
-      complement: String(input.complement ?? "").trim() || undefined,
-    }
-
-    const customerId = await asaasEnsureCustomerWithAddress({
-      customerId: prepared.customerId,
-      name: prepared.name,
-      email: prepared.email,
-      cpfCnpj: prepared.cpfCnpj,
-      phone: prepared.phone,
-      externalReference: prepared.storeId,
-      address,
-    })
-
-    await withDb((db) => {
-      const store = storeOf(db, prepared.storeId)
-      store.asaasCustomerId = customerId
-      touch(store.id)
-      return true
-    }, true)
-
+    // Só CPF → Pix avulso de 30 dias (sem CEP/endereço).
     const checkout = await asaasCreateCheckout({
       name: prepared.name,
       email: prepared.email,
       cpfCnpj: prepared.cpfCnpj,
       phone: prepared.phone,
-      address,
       value: planValueReais(prepared.totalCents),
-      nextDueDate: nextDueDateIso(),
       externalReference: prepared.storeId,
-      description: `Agenda · ${prepared.storeName} · 30 dias`,
+      description: "Agenda 30 dias",
       successUrl: `${appBaseUrl()}/plano/ok`,
       cancelUrl: `${appBaseUrl()}/plano/pagar/${pageToken}`,
     })
@@ -1968,11 +1934,9 @@ export const domain = {
     return withDb((db) => {
       const store = storeOf(db, prepared.storeId)
       store.billingStatus = "pending"
-      store.asaasCustomerId = customerId
       store.asaasCheckoutId = checkout.id
       store.asaasPayUrl = checkout.url
       store.checkoutPageToken = pageToken
-      // URL direta da Asaas — evita página intermediária e link antigo.
       store.checkoutUrl = checkout.url
       if (store.asaasSubscriptionId?.startsWith("demo_")) store.asaasSubscriptionId = null
       touch(store.id)
