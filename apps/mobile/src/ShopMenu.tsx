@@ -1170,7 +1170,7 @@ function PlanPanel(props: {
     { icon: "calendar-outline" as const, title: "Agenda completa", hint: "Horários, clientes e equipe no mesmo lugar." },
     { icon: "gift-outline" as const, title: "7 dias grátis", hint: "Teste tudo antes de assinar." },
     { icon: "people-outline" as const, title: "Equipe sob medida", hint: `Cada pessoa da equipe ativa soma ${formatBRL(billing.seatPriceCents)}.` },
-    { icon: "qr-code-outline" as const, title: "Pix na Asaas", hint: "Pague 1 mês via Pix no checkout seguro da Asaas." },
+    { icon: "qr-code-outline" as const, title: "Pix avulso", hint: "Paga 30 dias agora. Depois do prazo, gera outro Pix." },
   ]
 
   return (
@@ -1187,12 +1187,12 @@ function PlanPanel(props: {
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={{ color: props.colors.onPrimary, opacity: 0.78, fontSize: 12, fontWeight: "700", letterSpacing: 1 }}>
-              MENSALIDADE
+              30 DIAS DE ACESSO
             </Text>
             <Text style={{ color: props.colors.onPrimary, fontSize: 40, fontWeight: "700", letterSpacing: -1 }}>
               {formatBRL(billing.planCents)}
             </Text>
-            <Text style={{ color: props.colors.onPrimary, opacity: 0.82, fontSize: 14 }}>por mês · cancela quando quiser</Text>
+            <Text style={{ color: props.colors.onPrimary, opacity: 0.82, fontSize: 14 }}>Pix avulso · libera a agenda por 30 dias</Text>
           </View>
           <View
             style={{
@@ -1224,10 +1224,14 @@ function PlanPanel(props: {
 
         {active && (
           <View style={{ gap: 4 }}>
-            <Text style={{ color: props.colors.onPrimary, opacity: 0.9, lineHeight: 20 }}>Sua assinatura está em dia.</Text>
+            <Text style={{ color: props.colors.onPrimary, opacity: 0.9, lineHeight: 20 }}>
+              {daysLeft != null && daysLeft >= 0
+                ? `${daysLeft} dia${daysLeft === 1 ? "" : "s"} restantes neste período.`
+                : "Seu período de 30 dias está ativo."}
+            </Text>
             {billing.nextDueDate && (
               <Text style={{ color: props.colors.onPrimary, opacity: 0.72, fontSize: 13 }}>
-                Próximo vencimento {billing.nextDueDate.split("-").reverse().join("/")}
+                Válido até {billing.nextDueDate.split("-").reverse().join("/")}
               </Text>
             )}
           </View>
@@ -1236,8 +1240,8 @@ function PlanPanel(props: {
         {(billing.status === "pending" || billing.status === "past_due" || blocked) && !trialLike && (
           <Text style={{ color: props.colors.onPrimary, opacity: 0.92, lineHeight: 20 }}>
             {blocked
-              ? "Regularize o pagamento para liberar a agenda novamente."
-              : "Conclua o pagamento para ativar o plano."}
+              ? "Os 30 dias acabaram. Pague um novo Pix para liberar mais 30 dias."
+              : "Conclua o Pix para liberar 30 dias de acesso."}
           </Text>
         )}
       </View>
@@ -1281,7 +1285,7 @@ function PlanPanel(props: {
             borderTopColor: props.colors.line,
           }}
         >
-          <Text style={{ color: props.colors.ink, fontWeight: "700" }}>Total mensal</Text>
+          <Text style={{ color: props.colors.ink, fontWeight: "700" }}>Total (30 dias)</Text>
           <Text style={{ color: statusTone, fontWeight: "700", fontSize: 18 }}>{formatBRL(billing.planCents)}</Text>
         </View>
       </SoftCard>
@@ -1293,7 +1297,7 @@ function PlanPanel(props: {
               {blocked ? "Assinar para continuar" : "Assinar plano"}
             </Text>
             <Text style={{ color: props.colors.muted, lineHeight: 20 }}>
-              Informe CPF/CNPJ, CEP e número. O pagamento é só via Pix na Asaas (1 mês).
+              Informe CPF/CNPJ, CEP e número. Você compra 30 dias de acesso via Pix.
             </Text>
           </View>
           {!billing.configured && (
@@ -1414,7 +1418,7 @@ function PlanPanel(props: {
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: props.colors.ink, fontWeight: "700", fontSize: 16 }}>Tudo certo</Text>
               <Text style={{ color: props.colors.muted, lineHeight: 19 }}>
-                A mensalidade acompanha a equipe automaticamente.
+                Ao acabar os 30 dias, a agenda pausa até um novo Pix.
               </Text>
             </View>
           </View>
@@ -1426,8 +1430,8 @@ function PlanPanel(props: {
           <SoftPress
             onPress={() => {
               Alert.alert(
-                "Plano ativo",
-                "Se cadastrar ou desativar um atendente, o valor da assinatura atualiza sozinho no próximo ciclo.",
+                "Como funciona",
+                "Cada Pix libera 30 dias. Se a equipe mudar, o novo valor vale no próximo Pix que você gerar.",
               )
             }}
             style={{ paddingVertical: 4 }}

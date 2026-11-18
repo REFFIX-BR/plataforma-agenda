@@ -217,8 +217,8 @@ export default function CheckoutPayPage() {
 
               <div className="grid gap-2 text-sm text-[color:var(--muted)]">
                 <p>✓ Agenda, equipe e clientes liberados por 30 dias</p>
-                <p>✓ Pix na página segura da Asaas (1 mês de acesso)</p>
-                <p>✓ Cancele quando quiser pelo suporte Agenda</p>
+                <p>✓ Pagamento avulso via Pix na Asaas</p>
+                <p>✓ Ao acabar o prazo, gere um novo Pix para renovar</p>
               </div>
 
               <button

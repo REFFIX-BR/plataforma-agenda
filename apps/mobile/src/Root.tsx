@@ -692,8 +692,8 @@ function Main(props: {
                 </Text>
                 <Text style={{ color: props.colors.muted, lineHeight: 22, fontSize: 15 }}>
                   {owner
-                    ? `Renove agora para continuar usando a agenda de ${storeName} (${formatBRL(billing?.planCents ?? props.session.planCents)}/mês). Este aviso só some depois do pagamento.`
-                    : `O acesso à agenda de ${storeName} está pausado. Fale com o administrador para renovar o plano, ou saia da conta.`}
+                    ? `Os 30 dias acabaram. Pague um novo Pix de ${formatBRL(billing?.planCents ?? props.session.planCents)} para liberar mais 30 dias em ${storeName}.`
+                    : `O acesso à agenda de ${storeName} está pausado. Fale com o administrador para renovar, ou saia da conta.`}
                 </Text>
                 {owner && (
                   <>
@@ -732,9 +732,9 @@ function Main(props: {
                       onPress={() => void renewNow()}
                       disabled={renewBusy}
                     >
-                      {renewBusy ? <ActivityIndicator color={props.colors.onPrimary} /> : <Ionicons name="card-outline" size={18} color={props.colors.onPrimary} />}
+                      {renewBusy ? <ActivityIndicator color={props.colors.onPrimary} /> : <Ionicons name="qr-code-outline" size={18} color={props.colors.onPrimary} />}
                       <Text style={{ color: props.colors.onPrimary, textAlign: "center", fontWeight: "700", fontSize: 16 }}>
-                        {renewBusy ? "Abrindo..." : "Renovar agora"}
+                        {renewBusy ? "Abrindo Pix..." : "Pagar Pix · 30 dias"}
                       </Text>
                     </SoftPress>
                     {renewDemo && (

@@ -318,7 +318,7 @@ function sessionBillingOf(db: DB, store: StoreRow): SessionBilling {
 
 function planDescription(store: StoreRow, seats: number) {
   const total = planCents(seats)
-  return `Agenda · ${store.name} · R$ ${(store.basePriceCents / 100).toFixed(2).replace(".", ",")} + ${seats} atendente(s) · ${formatPlan(total)} / mês`
+  return `Agenda · ${store.name} · ${seats} atendente(s) · ${formatPlan(total)} · 30 dias`
 }
 
 function formatPlan(cents: number) {
@@ -333,7 +333,9 @@ async function syncSubscriptionValue(storeId: string) {
   if (!asaasConfigured()) return
   const payload = await withDb((db) => {
     const store = db.stores.find((item) => item.id === storeId)
+    // Pix é cobrança avulsa (pix_...), sem assinatura Asaas para atualizar valor.
     if (!store?.asaasSubscriptionId) return null
+    if (store.asaasSubscriptionId.startsWith("pix_") || store.asaasSubscriptionId.startsWith("demo_")) return null
     const seats = seatCountOf(db, store.id)
     return {
       subscriptionId: store.asaasSubscriptionId,
@@ -345,7 +347,7 @@ async function syncSubscriptionValue(storeId: string) {
   try {
     await asaasUpdateSubscriptionValue(payload.subscriptionId, payload.value, payload.description)
   } catch {
-    // Não quebra cadastro de equipe se a Asaas falhar; o próximo webhook/checkout corrige.
+    // Não quebra cadastro de equipe se a Asaas falhar; o próximo checkout corrige.
   }
 }
 
@@ -1958,7 +1960,7 @@ export const domain = {
       value: planValueReais(prepared.totalCents),
       nextDueDate: nextDueDateIso(),
       externalReference: prepared.storeId,
-      description: `Agenda · ${prepared.storeName} · ${prepared.seats} atendente(s)`,
+      description: `Agenda · ${prepared.storeName} · 30 dias`,
       successUrl: `${appBaseUrl()}/plano/ok`,
       cancelUrl: `${appBaseUrl()}/plano/pagar/${pageToken}`,
     })
@@ -1972,7 +1974,6 @@ export const domain = {
       store.checkoutPageToken = pageToken
       // URL direta da Asaas — evita página intermediária e link antigo.
       store.checkoutUrl = checkout.url
-      store.nextDueDate = nextDueDateIso()
       if (store.asaasSubscriptionId?.startsWith("demo_")) store.asaasSubscriptionId = null
       touch(store.id)
       return {
@@ -2014,11 +2015,11 @@ export const domain = {
       }
       store.billingStatus = "active"
       store.lastPaidAt = new Date().toISOString()
-      store.nextDueDate = nextDueDateIso(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+      store.nextDueDate = planPeriodEndIso()
       store.checkoutUrl = null
       store.asaasPayUrl = null
       store.asaasCheckoutId = store.asaasCheckoutId || `demo_${store.id}`
-      store.asaasSubscriptionId = store.asaasSubscriptionId || `demo_sub_${store.id}`
+      store.asaasSubscriptionId = store.asaasSubscriptionId || `demo_pix_${store.id}`
       touch(store.id)
       return billingOf(db, store)
     }, true)
@@ -2034,11 +2035,11 @@ export const domain = {
       const seats = seatCountOf(db, store.id)
       store.billingStatus = "active"
       store.lastPaidAt = new Date().toISOString()
-      store.nextDueDate = nextDueDateIso(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+      store.nextDueDate = planPeriodEndIso()
       store.checkoutUrl = null
       store.asaasPayUrl = null
       store.asaasCheckoutId = store.asaasCheckoutId || `demo_${store.id}`
-      store.asaasSubscriptionId = store.asaasSubscriptionId || `demo_sub_${store.id}`
+      store.asaasSubscriptionId = store.asaasSubscriptionId || `demo_pix_${store.id}`
       touch(store.id)
       return {
         ok: true,
