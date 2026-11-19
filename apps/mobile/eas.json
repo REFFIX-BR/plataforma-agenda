@@ -30,6 +30,7 @@
     "production": {
       "ios": {
         "appleId": "contato.reffix@gmail.com",
+        "ascAppId": "6836878851",
         "appleTeamId": "433N33S85T",
         "language": "pt-BR"
       }
