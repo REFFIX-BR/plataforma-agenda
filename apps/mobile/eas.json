@@ -17,13 +17,21 @@
       "channel": "preview"
     },
     "production": {
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       },
-      "channel": "production"
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "433N33S85T",
+        "language": "pt-BR"
+      }
+    }
   }
 }
