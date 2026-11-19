@@ -2,6 +2,7 @@
   "expo": {
     "name": "+Agenda",
     "slug": "agenda-reffix",
+    "owner": "juninho_dev",
     "scheme": "agenda",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -50,7 +51,24 @@
           "defaultChannel": "horarios"
         }
       ],
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-updates"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ed676924-031d-4310-b4bd-a20711c65701"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ed676924-031d-4310-b4bd-a20711c65701",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "preview"
+      }
+    }
   }
 }

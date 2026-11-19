@@ -39,28 +39,6 @@ async function ensureChannel() {
   })
 }
 
-/** Dispara um aviso em alguns segundos para validar permissão e canal no aparelho. */
-export async function fireTestReminder(seconds = 8) {
-  const ok = await ensurePermission()
-  if (!ok) return { ok: false as const, reason: "permission" as const }
-  await ensureChannel()
-  const fireAt = new Date(Date.now() + Math.max(3, seconds) * 1000)
-  await Notifications.scheduleNotificationAsync({
-    identifier: `ag-test-${Date.now()}`,
-    content: {
-      title: "+Agenda",
-      body: "Se você leu isso, a notificação do +Agenda está funcionando.",
-      sound: "default",
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: fireAt,
-      channelId: CHANNEL,
-    },
-  })
-  return { ok: true as const, fireAt }
-}
-
 export async function syncAppointmentReminders(profileId: string, minutes: number[], items: AppointmentView[]) {
   const ok = await ensurePermission()
   if (!ok) return false
