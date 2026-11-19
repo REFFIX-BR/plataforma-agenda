@@ -1105,22 +1105,6 @@ function PlanPanel(props: {
     }
   }
 
-  async function simulatePayment() {
-    setBusy(true)
-    setError("")
-    setMessage("")
-    try {
-      const next = await api<BillingSnapshot>("/api/billing/demo-confirm", { method: "POST", body: "{}" })
-      setBilling(next)
-      await props.reloadSession()
-      setMessage("Pagamento concluído. A agenda foi liberada.")
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível simular o pagamento.")
-    } finally {
-      setBusy(false)
-    }
-  }
-
   if (!billing) {
     return (
       <View style={{ paddingVertical: 48, alignItems: "center", gap: 12 }}>
@@ -1323,24 +1307,6 @@ function PlanPanel(props: {
           {billing.checkoutUrl && billing.status === "pending" && (
             <SoftPress onPress={() => void openExternal(billing.checkoutUrl!)} style={{ paddingVertical: 6 }}>
               <Text style={{ color: props.colors.primary, textAlign: "center", fontWeight: "700" }}>Abrir página novamente</Text>
-            </SoftPress>
-          )}
-          {billing.demo && (
-            <SoftPress
-              onPress={() => void simulatePayment()}
-              disabled={busy}
-              style={{
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: props.colors.line,
-                backgroundColor: props.colors.bg,
-                paddingVertical: 14,
-                opacity: busy ? 0.7 : 1,
-              }}
-            >
-              <Text style={{ color: props.colors.ink, textAlign: "center", fontWeight: "700" }}>
-                {busy ? "Confirmando..." : "Simular pagamento concluído"}
-              </Text>
             </SoftPress>
           )}
         </SoftCard>

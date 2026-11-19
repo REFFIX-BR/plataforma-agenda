@@ -38,8 +38,9 @@ export function asaasSandbox() {
   if (process.env.ASAAS_USE_SANDBOX != null) {
     return !["0", "false", "no"].includes(String(process.env.ASAAS_USE_SANDBOX).toLowerCase())
   }
-  const env = (process.env.ASAAS_ENV || "sandbox").toLowerCase()
-  return env !== "production"
+  // Produção por padrão. Só usa sandbox se ASAAS_ENV=sandbox explicitamente.
+  const env = (process.env.ASAAS_ENV || "production").toLowerCase()
+  return env === "sandbox"
 }
 
 export function asaasCheckoutUrl(checkoutId: string) {

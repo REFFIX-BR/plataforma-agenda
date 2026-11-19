@@ -98,17 +98,16 @@ async function handle(request: Request, path: string[]) {
   if (key === "GET health") return Response.json({ ok: true })
   if (key === "POST billing/webhook") {
     const secret = process.env.ASAAS_WEBHOOK_TOKEN?.trim()
-    if (secret) {
-      const header = request.headers.get("asaas-access-token") || request.headers.get("x-asaas-token") || ""
-      if (header !== secret) throw new HttpError(401, "Webhook sem autorização.")
-    }
+    if (!secret) throw new HttpError(503, "ASAAS_WEBHOOK_TOKEN não configurado no servidor.")
+    const header = request.headers.get("asaas-access-token") || request.headers.get("x-asaas-token") || ""
+    if (header !== secret) throw new HttpError(401, "Webhook sem autorização.")
     return Response.json(await domain.asaasWebhook(body))
   }
   if (method === "GET" && path[0] === "billing" && path[1] === "page" && path[2]) {
     return Response.json(await domain.checkoutPage(decodeURIComponent(path[2])))
   }
   if (method === "POST" && path[0] === "billing" && path[1] === "page" && path[2] === "demo") {
-    return Response.json(await domain.confirmDemoBillingByToken(String(body.token ?? "")))
+    throw new HttpError(404, "Simulação de pagamento desligada em produção.")
   }
 
   const userId = await domain.userIdFromToken(token).catch((error: unknown) => {
@@ -212,7 +211,9 @@ async function handle(request: Request, path: string[]) {
   if (key === "PUT reminders") return Response.json(await domain.saveReminders(userId, body))
   if (key === "GET billing") return Response.json(await domain.billing(userId))
   if (key === "POST billing/checkout") return Response.json(await domain.createBillingCheckout(userId, body))
-  if (key === "POST billing/demo-confirm") return Response.json(await domain.confirmDemoBilling(userId))
+  if (key === "POST billing/demo-confirm") {
+    throw new HttpError(404, "Simulação de pagamento desligada em produção.")
+  }
 
   throw new HttpError(404, "Não encontrei esse caminho.")
 }

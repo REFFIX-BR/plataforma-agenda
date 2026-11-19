@@ -270,9 +270,11 @@ function wantsLiveAsaas() {
   return sandbox === "false" || sandbox === "0" || sandbox === "no" || env === "production"
 }
 
-/** Demo/simular só quando não há Asaas configurada. Sandbox e produção usam checkout real. */
+/** Demo desligado em produção. Sem chave Asaas o checkout deve falhar, não simular. */
 function isDemoBilling(_store?: StoreRow) {
-  return !asaasConfigured()
+  if (process.env.NODE_ENV === "production") return false
+  if (process.env.ALLOW_BILLING_DEMO === "1") return !asaasConfigured()
+  return false
 }
 
 function billingOf(db: DB, store: StoreRow): BillingSnapshot {

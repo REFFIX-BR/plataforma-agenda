@@ -7,12 +7,9 @@ export default function PlanoDemoPage() {
       <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-6 py-16">
         <BrandMark href={null} size="md" priority />
         <p className="text-sm font-semibold tracking-wide text-[color:var(--primary)]">CHECKOUT</p>
-        <h1 className="serif text-4xl leading-none">Asaas ainda sem chave</h1>
+        <h1 className="serif text-4xl leading-none">Pagamento só via Pix</h1>
         <p className="text-lg text-[color:var(--muted)]">
-          Este servidor está sem <code>ASAAS_API_KEY</code>. Em produção, configure a chave da Asaas e reinicie o app para o pagamento real.
-        </p>
-        <p className="text-sm text-[color:var(--muted)]">
-          Em desenvolvimento local, com a chave vazia, o app ainda pode simular o pagamento. Com a Asaas ligada (sandbox ou produção), a simulação some.
+          A simulação foi desligada. Em produção o plano libera depois do Pix confirmado pela Asaas.
         </p>
       </main>
     </ThemeScope>

@@ -55,31 +55,7 @@ export default function CheckoutPayPage() {
       window.location.href = page.payUrl
       return
     }
-    if (!page.demo) {
-      setError("Link de pagamento ainda não ficou pronto. Volte ao app e gere de novo.")
-      return
-    }
-    setBusy(true)
-    setError("")
-    try {
-      const paid = await api<{
-        ok: boolean
-        storeName: string
-        nextDueDate: string | null
-        planCents: number
-      }>("/api/billing/page/demo", { method: "POST", body: JSON.stringify({ token: page.token }) })
-      setPage({
-        ...page,
-        status: "active",
-        nextDueDate: paid.nextDueDate ?? page.nextDueDate,
-        planCents: paid.planCents ?? page.planCents,
-      })
-      setDone(true)
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível confirmar.")
-    } finally {
-      setBusy(false)
-    }
+    setError("Link de pagamento ainda não ficou pronto. Volte ao app e gere de novo.")
   }
 
   if (error && !page) {
@@ -227,17 +203,11 @@ export default function CheckoutPayPage() {
                 onClick={() => void pay()}
                 disabled={busy}
               >
-                {busy
-                  ? "Confirmando..."
-                  : page.demo
-                    ? "Simular pagamento de 1 mês"
-                    : `Pagar ${formatBRL(page.planCents)} · 1 mês`}
+                {busy ? "Abrindo..." : `Pagar ${formatBRL(page.planCents)} · 30 dias`}
               </button>
 
               <p className="text-center text-xs leading-relaxed text-[color:var(--muted)]">
-                {page.demo
-                  ? "Modo de simulação. Confirme o pagamento para liberar a agenda e ver o próximo vencimento."
-                  : "Ao continuar, você confirma o pagamento de 1 mês e vai para o checkout da Asaas."}
+                Ao continuar, você vai para o Pix da Asaas. O acesso libera quando o pagamento confirmar.
               </p>
 
               {error && <p className="alert" role="alert">{error}</p>}

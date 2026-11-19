@@ -460,7 +460,6 @@ function Main(props: {
   const [renewCpf, setRenewCpf] = useState("")
   const [renewBusy, setRenewBusy] = useState(false)
   const [renewError, setRenewError] = useState("")
-  const [renewDemo, setRenewDemo] = useState(false)
   const wasBlocked = useRef(false)
   const billing = props.session.billing
   const blocked = billing?.access === "blocked"
@@ -495,7 +494,6 @@ function Main(props: {
     void api<BillingSnapshot>("/api/billing")
       .then((next) => {
         if (next.cpfCnpj) setRenewCpf(formatDocInput(next.cpfCnpj))
-        setRenewDemo(Boolean(next.demo))
       })
       .catch(() => undefined)
   }, [blocked])
@@ -527,7 +525,6 @@ function Main(props: {
         method: "POST",
         body: JSON.stringify({ cpfCnpj: renewCpf }),
       })
-      setRenewDemo(Boolean(next.demo))
       if (next.cpfCnpj) setRenewCpf(formatDocInput(next.cpfCnpj))
       if (!next.checkoutUrl) throw new Error("Não recebi o link de pagamento.")
       const finalUrl = await resolveCheckoutUrl(next.checkoutUrl)
@@ -536,19 +533,6 @@ function Main(props: {
       await Linking.openURL(finalUrl)
     } catch (cause) {
       setRenewError(cause instanceof Error ? cause.message : "Não foi possível abrir o pagamento.")
-    } finally {
-      setRenewBusy(false)
-    }
-  }
-
-  async function renewDemoPay() {
-    setRenewBusy(true)
-    setRenewError("")
-    try {
-      await api<BillingSnapshot>("/api/billing/demo-confirm", { method: "POST", body: "{}" })
-      await props.reloadSession()
-    } catch (cause) {
-      setRenewError(cause instanceof Error ? cause.message : "Não foi possível confirmar o pagamento.")
     } finally {
       setRenewBusy(false)
     }
@@ -752,11 +736,6 @@ function Main(props: {
                         {renewBusy ? "Abrindo Pix..." : "Pagar Pix · 30 dias"}
                       </Text>
                     </SoftPress>
-                    {renewDemo && (
-                      <SoftPress onPress={() => void renewDemoPay()} disabled={renewBusy} style={{ paddingVertical: 6 }}>
-                        <Text style={{ color: props.colors.primary, textAlign: "center", fontWeight: "700" }}>Simular pagamento (demo)</Text>
-                      </SoftPress>
-                    )}
                   </>
                 )}
                 <SoftPress style={{ paddingVertical: 10 }} onPress={() => void props.onLogout()} disabled={renewBusy}>
