@@ -45,7 +45,7 @@ import {
   type ViewStyle,
 } from "react-native"
 import Ionicons from "@expo/vector-icons/build/Ionicons"
-import { api, apiUrl, clearSessionToken, saveSessionToken, TOKEN_KEY } from "./api"
+import { api, apiUrl, clearSessionToken, isOfflineError, saveSessionToken, TOKEN_KEY } from "./api"
 import { AgendaForm } from "./AgendaForm"
 import { MonthCalendar } from "./Calendar"
 import { ClientsScreen } from "./ClientsScreen"
@@ -55,6 +55,7 @@ import { ScreenEnter, SoftPress, Stagger, cardShadow } from "./motion"
 import { useLayout } from "./layout"
 import { Atmosphere, Avatar, PageTitle, SoftCard } from "./ui"
 import { LoginScreen } from "./LoginScreen"
+import { OfflineScreen } from "./OfflineScreen"
 import { ShopMenu } from "./ShopMenu"
 import { SplashBoot } from "./SplashBoot"
 import { StaffMenu } from "./StaffMenu"
@@ -75,7 +76,7 @@ type Paint = {
   ok: string
 }
 
-type Phase = "boot" | "auth" | "start" | "app"
+type Phase = "boot" | "offline" | "auth" | "start" | "app"
 type Tab = "agenda" | "clients" | "money" | "more"
 type AgendaSheet = {
   day: string
@@ -90,6 +91,7 @@ export function Root() {
   const [session, setSession] = useState<SessionState | null>(null)
   const [tab, setTab] = useState<Tab>("agenda")
   const [bootOverlay, setBootOverlay] = useState(true)
+  const [offlineBusy, setOfflineBusy] = useState(false)
   const bootOverlayRef = useRef(true)
   const splashOpacity = useRef(new Animated.Value(1)).current
   const splashScale = useRef(new Animated.Value(1)).current
@@ -218,30 +220,39 @@ export function Root() {
     }
   }, [phase, refreshSession])
 
+  const bootstrap = useCallback(async () => {
+    const token = await getItem(TOKEN_KEY)
+    try {
+      const next = await api<SessionState | null>("/api/me")
+      return { next: token ? next : null }
+    } catch (cause) {
+      // Sem rede → offline. Qualquer resposta HTTP (401 etc.) = online.
+      if (isOfflineError(cause)) throw cause
+      return { next: null as SessionState | null }
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     const started = Date.now()
     const minSplashMs = 3000
     const giveUp = setTimeout(() => {
-      if (!cancelled) revealFromBoot("auth", null)
-    }, 8000)
+      if (!cancelled) revealFromBoot("offline", null)
+    }, 10000)
     void (async () => {
       try {
-        const token = await getItem(TOKEN_KEY)
-        if (!token) {
-          const wait = Math.max(0, minSplashMs - (Date.now() - started))
-          if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
-          if (!cancelled) revealFromBoot("auth", null)
-          return
-        }
-        const next = await api<SessionState | null>("/api/me")
+        const result = await bootstrap()
         const wait = Math.max(0, minSplashMs - (Date.now() - started))
         if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
-        if (!cancelled) await enter(next)
-      } catch {
+        if (cancelled) return
+        if (!result.next) revealFromBoot("auth", null)
+        else await enter(result.next)
+      } catch (cause) {
         const wait = Math.max(0, minSplashMs - (Date.now() - started))
         if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
-        if (!cancelled) revealFromBoot("auth", null)
+        if (cancelled) return
+        if (isOfflineError(cause)) revealFromBoot("offline", null)
+        else revealFromBoot("auth", null)
       } finally {
         clearTimeout(giveUp)
       }
@@ -250,7 +261,29 @@ export function Root() {
       cancelled = true
       clearTimeout(giveUp)
     }
-  }, [enter, revealFromBoot])
+  }, [bootstrap, enter, revealFromBoot])
+
+  async function retryOnline() {
+    setOfflineBusy(true)
+    try {
+      const result = await bootstrap()
+      if (!result.next) {
+        setPhase("auth")
+        setSession(null)
+        return
+      }
+      await enter(result.next)
+    } catch (cause) {
+      if (isOfflineError(cause)) {
+        setPhase("offline")
+        return
+      }
+      setPhase("auth")
+      setSession(null)
+    } finally {
+      setOfflineBusy(false)
+    }
+  }
 
   async function logout() {
     try { await api("/api/auth/logout", { method: "POST" }) } catch { /* a sessão local sai mesmo assim */ }
@@ -269,6 +302,9 @@ export function Root() {
             transform: [{ translateY: contentRise }],
           }}
         >
+          {phase === "offline" && (
+            <OfflineScreen onRetry={() => void retryOnline()} busy={offlineBusy} />
+          )}
           {phase === "auth" && (
             <LoginScreen onDone={async (token, next) => { await saveSessionToken(token); await enter(next) }} />
           )}

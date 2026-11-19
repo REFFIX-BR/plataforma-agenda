@@ -40,6 +40,18 @@ export async function apiUrl() {
   return stored
 }
 
+export const OFFLINE_ERROR = "Sem internet. Conecte-se e tente de novo."
+
+export function isOfflineError(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : String(cause ?? "")
+  return (
+    message === OFFLINE_ERROR ||
+    /network request failed|failed to fetch|networkerror|internet|offline|abort|timed?\s*out|econnrefused|enotfound|sem internet|não respondeu/i.test(
+      message,
+    )
+  )
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const base = (await apiUrl()).replace(/\/$/, "")
   const token = await getItem(TOKEN_KEY)
@@ -58,10 +70,10 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     })
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : ""
-    if (/abort/i.test(message)) {
-      throw new Error("O computador não respondeu. Feche o Expo Go e abra de novo.")
+    if (/abort|network request failed|failed to fetch|networkerror|econnrefused|enotfound/i.test(message) || !message) {
+      throw new Error(OFFLINE_ERROR)
     }
-    throw new Error("O computador não respondeu. Feche o Expo Go e abra de novo.")
+    throw new Error(OFFLINE_ERROR)
   } finally {
     clearTimeout(timer)
   }
