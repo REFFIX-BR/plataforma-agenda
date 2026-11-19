@@ -29,6 +29,7 @@
   "submit": {
     "production": {
       "ios": {
+        "appleId": "contato.reffix@gmail.com",
         "appleTeamId": "433N33S85T",
         "language": "pt-BR"
       }
