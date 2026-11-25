@@ -122,4 +122,17 @@ test("conflito de horário, faturamento e comissão por pessoa", async () => {
   const storefront = await domain.publicStore(session.store!.slug)
   assert.equal(storefront?.store.inviteCode, null)
   assert.equal((await domain.finance(ownerId, day)).day.forecastCents, 15000)
+
+  await domain.deleteAccount(liaId)
+  await assert.rejects(
+    () => domain.login({ email: "lia@rumo.test", password: "segredo" }),
+    (error: unknown) => error instanceof HttpError && error.status === 401,
+  )
+
+  await domain.deleteAccount(ownerId)
+  await assert.rejects(
+    () => domain.login({ email: "helena@rumo.test", password: "segredo" }),
+    (error: unknown) => error instanceof HttpError && error.status === 401,
+  )
+  assert.equal(await domain.publicStore(session.store!.slug), null)
 })

@@ -71,6 +71,25 @@ export default function PainelLayout({ children }: { children: ReactNode }) {
               })}
             </nav>
             <button type="button" onClick={() => void logout()} className="btn-ghost mt-4 w-full">Sair</button>
+            <button
+              type="button"
+              className="btn-ghost mt-2 w-full text-[var(--danger)]"
+              onClick={() => {
+                const ok = window.confirm(
+                  owner
+                    ? "Excluir conta apaga a loja, a equipe, os clientes e a agenda. Não dá para desfazer. Continuar?"
+                    : "Excluir conta remove seu acesso a esta loja. Não dá para desfazer. Continuar?",
+                )
+                if (!ok) return
+                void api("/api/me", { method: "DELETE" })
+                  .then(() => router.replace("/entrar"))
+                  .catch((error: unknown) => {
+                    window.alert(error instanceof Error ? error.message : "Não foi possível excluir a conta.")
+                  })
+              }}
+            >
+              Excluir conta
+            </button>
           </aside>
           <div className="min-w-0 px-4 py-5 sm:px-6">{children}</div>
         </div>

@@ -414,8 +414,8 @@ export function AgendaForm(props: {
     )
   }
 
-  const sheet = (title: string, open: boolean, close: () => void, body: ReactNode) => (
-    <Modal visible={open} animationType="slide" onRequestClose={close}>
+  const sheet = (title: string, open: boolean, close: () => void, body: ReactNode) => open ? (
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 30, backgroundColor: props.colors.bg }}>
       <View style={{ flex: 1, backgroundColor: props.colors.bg }}>
         <View style={{ backgroundColor: props.colors.primary, paddingTop: layout.top + 12, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
           <Pressable onPress={close} hitSlop={8} style={{ width: 52, alignItems: "center" }}>
@@ -426,12 +426,12 @@ export function AgendaForm(props: {
         </View>
         {body}
       </View>
-    </Modal>
-  )
+    </View>
+  ) : null
 
   return (
-    <>
-      <Modal visible animationType="slide" onRequestClose={props.onClose}>
+    <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={props.onClose}>
+      <View style={{ flex: 1 }}>
         <KeyboardAvoidingView style={{ flex: 1, backgroundColor: props.colors.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <View style={{ backgroundColor: props.colors.primary, paddingTop: layout.top + 12, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
             <Pressable onPress={props.onClose} hitSlop={8} style={{ width: 52, alignItems: "center" }}>
@@ -544,9 +544,9 @@ export function AgendaForm(props: {
             )}
           </View>
         </KeyboardAvoidingView>
-      </Modal>
 
-      <Modal visible={cancelOpen} animationType="slide" onRequestClose={() => setCancelOpen(false)}>
+      {cancelOpen && (
+      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 30, backgroundColor: props.colors.bg }}>
         <View style={{ flex: 1, backgroundColor: props.colors.bg }}>
           <View style={{ backgroundColor: props.colors.primary, paddingTop: layout.top + 12, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
             <Pressable onPress={() => setCancelOpen(false)} hitSlop={8} style={{ width: 52, alignItems: "center" }}>
@@ -570,9 +570,10 @@ export function AgendaForm(props: {
             {!!error && <Text style={{ color: props.colors.danger }}>{error}</Text>}
           </ScrollView>
         </View>
-      </Modal>
-
-      <Modal visible={repeatOpen} animationType="slide" onRequestClose={() => setRepeatOpen(false)}>
+      </View>
+      )}
+      {repeatOpen && (
+      <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 30, backgroundColor: props.colors.bg }}>
         <View style={{ flex: 1, backgroundColor: props.colors.bg }}>
           <View style={{ backgroundColor: props.colors.primary, paddingTop: layout.top + 12, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
             <Pressable onPress={() => setRepeatOpen(false)} hitSlop={8} style={{ width: 52, alignItems: "center" }}>
@@ -631,7 +632,8 @@ export function AgendaForm(props: {
             </Pressable>
           </View>
         </View>
-      </Modal>
+      </View>
+      )}
       {dateOpen && <DateDialog colors={props.colors} day={day} onClose={() => setDateOpen(false)} onConfirm={(next) => { setDay(next); setDateOpen(false) }} />}
       {timesOpen && <TimeDialog colors={props.colors} time={clock} onClose={() => setTimesOpen(false)} onConfirm={(next) => { setClock(next); setTimesOpen(false) }} />}
       {clientOpen && (
@@ -750,7 +752,8 @@ export function AgendaForm(props: {
           })}
         </View>
       ))}
-    </>
+      </View>
+    </Modal>
   )
 }
 

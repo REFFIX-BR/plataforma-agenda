@@ -922,6 +922,33 @@ function hourPayload(value: unknown): { weekday: number; start: string; end: str
   })
 }
 
+function wipeStore(db: DB, storeId: string) {
+  const profileIds = new Set(db.profiles.filter((item) => item.storeId === storeId).map((item) => item.id))
+  const serviceIds = new Set(db.services.filter((item) => item.storeId === storeId).map((item) => item.id))
+  const professionIds = new Set(db.professions.filter((item) => item.storeId === storeId).map((item) => item.id))
+  const appointmentIds = new Set(db.appointments.filter((item) => item.storeId === storeId).map((item) => item.id))
+
+  db.items = db.items.filter((item) => !appointmentIds.has(item.appointmentId))
+  db.appointments = db.appointments.filter((item) => item.storeId !== storeId)
+  db.clients = db.clients.filter((item) => item.storeId !== storeId)
+  db.blocks = db.blocks.filter((item) => item.storeId !== storeId)
+  db.hours = db.hours.filter((item) => item.storeId !== storeId)
+  db.reminders = db.reminders.filter((item) => !profileIds.has(item.professionalId))
+  db.commissions = db.commissions.filter((item) => item.storeId !== storeId)
+  db.links = db.links.filter((item) => {
+    if (item.serviceId && serviceIds.has(item.serviceId)) return false
+    if (item.professionId && professionIds.has(item.professionId)) return false
+    if (item.professionalId && profileIds.has(item.professionalId)) return false
+    return true
+  })
+  db.services = db.services.filter((item) => item.storeId !== storeId)
+  db.professions = db.professions.filter((item) => item.storeId !== storeId)
+  db.profiles = db.profiles.filter((item) => item.storeId !== storeId)
+  db.stores = db.stores.filter((item) => item.id !== storeId)
+  db.sessions = db.sessions.filter((session) => !profileIds.has(session.userId))
+  db.users = db.users.filter((item) => !profileIds.has(item.id))
+}
+
 export const domain = {
   async signup(input: Record<string, unknown>) {
     return withDb((db) => {
@@ -1001,6 +1028,35 @@ export const domain = {
       }
       touch(profile.storeId)
       return toSession(db, userId)
+    }, true)
+  },
+
+  async deleteAccount(userId: string) {
+    return withDb((db) => {
+      const user = db.users.find((item) => item.id === userId)
+      if (!user) throw new HttpError(404, "Conta não encontrada.")
+      const profile = profileOf(db, userId)
+
+      if (profile?.role === "owner") {
+        wipeStore(db, profile.storeId)
+      } else if (profile) {
+        const professionalId = profile.id
+        const storeId = profile.storeId
+        db.profiles = db.profiles.filter((item) => item.id !== professionalId)
+        db.commissions = db.commissions.filter((item) => item.professionalId !== professionalId)
+        db.reminders = db.reminders.filter((item) => item.professionalId !== professionalId)
+        db.hours = db.hours.filter((item) => item.professionalId !== professionalId)
+        db.blocks = db.blocks.filter((item) => item.professionalId !== professionalId)
+        db.links = db.links.filter((item) => item.professionalId !== professionalId)
+        db.sessions = db.sessions.filter((session) => session.userId !== userId)
+        db.users = db.users.filter((item) => item.id !== userId)
+        touch(storeId)
+      } else {
+        db.sessions = db.sessions.filter((session) => session.userId !== userId)
+        db.users = db.users.filter((item) => item.id !== userId)
+      }
+
+      return { ok: true as const }
     }, true)
   },
 

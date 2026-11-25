@@ -165,6 +165,34 @@ export function ShopMenu(props: {
         <SoftPress onPress={() => void props.onLogout()} style={{ padding: 14 }}>
           <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "700" }}>Sair</Text>
         </SoftPress>
+        <SoftPress
+          onPress={() => {
+            Alert.alert(
+              "Excluir conta",
+              "Apaga esta conta, a loja, a equipe, os clientes e a agenda. Não dá para desfazer.",
+              [
+                { text: "Cancelar", style: "cancel" },
+                {
+                  text: "Excluir tudo",
+                  style: "destructive",
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        await api("/api/me", { method: "DELETE" })
+                        await props.onLogout()
+                      } catch (cause) {
+                        Alert.alert("Não excluiu", cause instanceof Error ? cause.message : "Tente de novo.")
+                      }
+                    })()
+                  },
+                },
+              ],
+            )
+          }}
+          style={{ padding: 14, marginBottom: 8 }}
+        >
+          <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "600", opacity: 0.85 }}>Excluir conta</Text>
+        </SoftPress>
       </ScrollView>
 
       <PanelSheet

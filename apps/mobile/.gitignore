@@ -47,3 +47,7 @@ yarn-error.*
 # local APK builds
 *.apk
 *.aab
+
+credentials.json
+credentials/
+

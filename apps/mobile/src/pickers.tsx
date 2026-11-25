@@ -1,7 +1,7 @@
 import { addDays, monthStart, nextMonth, weekdayIndex } from "@rumo/core"
 import Ionicons from "@expo/vector-icons/build/Ionicons"
 import { useState } from "react"
-import { Modal, Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native"
+import { Pressable, ScrollView, Text, TextInput, View, type TextStyle } from "react-native"
 import type { ClientRecord } from "@rumo/core"
 import { useLayout } from "./layout"
 
@@ -93,7 +93,7 @@ export function ClientPicker(props: {
   }
 
   return (
-    <Modal visible animationType="slide" onRequestClose={() => (adding ? setAdding(false) : props.onClose())}>
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 40 }}>
       <View style={{ flex: 1, backgroundColor: props.colors.bg }}>
         <View style={{ backgroundColor: props.colors.primary, paddingTop: layout.top + 12, paddingBottom: 16, flexDirection: "row", alignItems: "center" }}>
           <Pressable onPress={() => (adding ? setAdding(false) : props.onClose())} hitSlop={8} style={{ width: 52, alignItems: "center" }}>
@@ -143,7 +143,7 @@ export function ClientPicker(props: {
           </View>
         )}
       </View>
-    </Modal>
+    </View>
   )
 }
 
@@ -156,7 +156,7 @@ export function DateDialog(props: { colors: Paint; day: string; onClose: () => v
   const daySize = Math.max(28, Math.min(36, layout.daySize))
 
   return (
-    <Modal transparent animationType="fade" visible onRequestClose={props.onClose}>
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 40 }}>
       <Pressable onPress={props.onClose} style={{ flex: 1, backgroundColor: "rgba(42, 33, 28, 0.45)", justifyContent: "center", padding: layout.pad }}>
         <Pressable onPress={() => undefined} style={{ backgroundColor: props.colors.surface, borderRadius: 28, overflow: "hidden", width: "100%", maxWidth: 420, alignSelf: "center" }}>
           <View style={{ backgroundColor: props.colors.primary, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, gap: 8 }}>
@@ -206,7 +206,7 @@ export function DateDialog(props: { colors: Paint; day: string; onClose: () => v
           </View>
         </Pressable>
       </Pressable>
-    </Modal>
+    </View>
   )
 }
 
@@ -238,7 +238,7 @@ export function TimeDialog(props: { colors: Paint; time: string | null; onClose:
   }
 
   return (
-    <Modal transparent animationType="fade" visible onRequestClose={props.onClose}>
+    <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, zIndex: 40 }}>
       <Pressable onPress={props.onClose} style={{ flex: 1, backgroundColor: "rgba(42, 33, 28, 0.45)", justifyContent: "center", padding: layout.pad }}>
         <Pressable onPress={() => undefined} style={{ backgroundColor: props.colors.surface, borderRadius: 28, overflow: "hidden", paddingBottom: 8, width: "100%", maxWidth: 420, alignSelf: "center" }}>
           <Text style={{ color: props.colors.muted, fontSize: 12, letterSpacing: 1, fontWeight: "700", paddingHorizontal: 20, paddingTop: 18 }}>SELECIONE O HORÁRIO</Text>
@@ -294,6 +294,6 @@ export function TimeDialog(props: { colors: Paint; time: string | null; onClose:
           </View>
         </Pressable>
       </Pressable>
-    </Modal>
+    </View>
   )
 }

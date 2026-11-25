@@ -118,6 +118,10 @@ async function handle(request: Request, path: string[]) {
   if (userId && method === "PATCH" && path[0] === "me" && path.length === 1) {
     return Response.json(await domain.updateAccount(userId, token, body))
   }
+  if (userId && method === "DELETE" && path[0] === "me" && path.length === 1) {
+    await domain.deleteAccount(userId)
+    return Response.json({ ok: true }, { headers: { "Set-Cookie": clearCookie() } })
+  }
 
   if (path[0] === "public" && path.length >= 2) {
     const slug = decodeURIComponent(path[1])

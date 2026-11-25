@@ -3,6 +3,7 @@ import { verticalById } from "@rumo/theme"
 import Ionicons from "@expo/vector-icons/build/Ionicons"
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -97,6 +98,34 @@ export function StaffMenu(props: {
 
         <SoftPress onPress={() => void props.onLogout()} style={{ padding: 14 }}>
           <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "700" }}>Sair</Text>
+        </SoftPress>
+        <SoftPress
+          onPress={() => {
+            Alert.alert(
+              "Excluir conta",
+              "Apaga sua conta e o acesso a esta loja. Não dá para desfazer.",
+              [
+                { text: "Cancelar", style: "cancel" },
+                {
+                  text: "Excluir conta",
+                  style: "destructive",
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        await api("/api/me", { method: "DELETE" })
+                        await props.onLogout()
+                      } catch (cause) {
+                        Alert.alert("Não excluiu", cause instanceof Error ? cause.message : "Tente de novo.")
+                      }
+                    })()
+                  },
+                },
+              ],
+            )
+          }}
+          style={{ padding: 14, marginBottom: 8 }}
+        >
+          <Text style={{ color: props.colors.danger, textAlign: "center", fontWeight: "600", opacity: 0.85 }}>Excluir conta</Text>
         </SoftPress>
       </ScrollView>
 
